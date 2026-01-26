@@ -1,3 +1,14 @@
+# Dependencies
+node_modules
+/.pnp
+.pnp.js
+
+# Build outputs
+dist
+dist-ssr
+build
+*.local
+
 # Logs
 logs
 *.log
@@ -7,18 +18,41 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-node_modules
-dist
-dist-ssr
-*.local
+# Environment files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+backend/.env
 
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
+!.vscode/settings.json
 .idea
-.DS_Store
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
 *.sw?
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Testing
+coverage
+.nyc_output
+
+# Uploads (in production these should be in a separate storage)
+backend/uploads/photos/*
+backend/uploads/videos/*
+!backend/uploads/photos/.gitkeep
+!backend/uploads/videos/.gitkeep
+
+# Misc
+*.pem
+.cache
+.temp
+*.tsbuildinfo
