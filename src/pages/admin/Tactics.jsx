@@ -16,7 +16,7 @@ const DraggablePlayer = ({ player, isOnField }) => {
     collect: (monitor) => ({
       isDragging: monitor.isDragging(),
     }),
-  }));
+  }), [player]);
 
   return (
     <div
@@ -45,15 +45,13 @@ const DraggablePlayer = ({ player, isOnField }) => {
 };
 
 const FieldPosition = ({ position, index, player, onDrop, onRemove, onPlayerClick }) => {
-  const { t } = useTranslation();
-
   const [{ isOver }, drop] = useDrop(() => ({
     accept: 'player',
     drop: (item) => onDrop(item.player, index),
     collect: (monitor) => ({
       isOver: monitor.isOver(),
     }),
-  }));
+  }), [onDrop, index]);
 
   return (
     <div
