@@ -23,8 +23,7 @@ const playerSchema = new mongoose.Schema({
     required: [true, 'Birth date is required']
   },
   birthYear: {
-    type: Number,
-    required: true
+    type: Number
   },
   photo: {
     type: String,
