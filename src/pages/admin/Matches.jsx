@@ -11,15 +11,15 @@ import toast from 'react-hot-toast';
 const MatchForm = ({ match, teams, onSubmit, onClose, loading }) => {
   const { t } = useTranslation();
   const { register, handleSubmit, formState: { errors } } = useForm({
-    defaultValues: match || {
-      team: '',
-      'opponent.name': '',
-      matchDate: new Date().toISOString().split('T')[0],
-      kickoffTime: '15:00',
-      venue: '',
-      isHome: true,
-      competition: 'Friendly',
-      formation: '4-3-3',
+    defaultValues: {
+      team: match?.team || '',
+      opponentName: match?.opponentName || '',
+      matchDate: match?.matchDate || new Date().toISOString().split('T')[0],
+      kickoffTime: match?.kickoffTime || '15:00',
+      venue: match?.venue || '',
+      isHome: match?.isHome !== false,
+      competition: match?.competition || 'Friendly',
+      formation: match?.formation || '4-3-3',
     }
   });
 
@@ -28,8 +28,22 @@ const MatchForm = ({ match, teams, onSubmit, onClose, loading }) => {
     label: `${team.name} (${team.ageCategory})`
   }));
 
+  const handleFormSubmit = (data) => {
+    const matchData = {
+      team: data.team,
+      opponent: { name: data.opponentName },
+      matchDate: data.matchDate,
+      kickoffTime: data.kickoffTime,
+      venue: data.venue || '',
+      isHome: data.isHome,
+      competition: data.competition || 'Friendly',
+      formation: data.formation || '4-3-3',
+    };
+    onSubmit(matchData);
+  };
+
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+    <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-4">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Select
           label={t('teams.title')}
@@ -40,8 +54,8 @@ const MatchForm = ({ match, teams, onSubmit, onClose, loading }) => {
         />
         <Input
           label={t('matches.opponent')}
-          error={errors['opponent.name']?.message}
-          {...register('opponent.name', { required: 'Opponent is required' })}
+          error={errors.opponentName?.message}
+          {...register('opponentName', { required: 'Opponent is required' })}
         />
         <Input
           label={t('matches.matchDate')}
@@ -154,25 +168,24 @@ const Matches = () => {
   });
 
   const handleSubmit = (data) => {
-    const matchData = {
-      ...data,
-      opponent: { name: data['opponent.name'] }
-    };
-    delete matchData['opponent.name'];
-
     if (editingMatch) {
-      updateMutation.mutate({ id: editingMatch._id, data: matchData });
+      updateMutation.mutate({ id: editingMatch._id, data });
     } else {
-      createMutation.mutate(matchData);
+      createMutation.mutate(data);
     }
   };
 
   const openEditModal = (match) => {
     setEditingMatch({
-      ...match,
-      matchDate: match.matchDate?.split('T')[0],
       team: match.team?._id || match.team,
-      'opponent.name': match.opponent?.name
+      opponentName: match.opponent?.name || '',
+      matchDate: match.matchDate?.split('T')[0],
+      kickoffTime: match.kickoffTime || '15:00',
+      venue: match.venue || '',
+      isHome: match.isHome !== false,
+      competition: match.competition || 'Friendly',
+      formation: match.formation || '4-3-3',
+      _id: match._id,
     });
     setShowModal(true);
   };
