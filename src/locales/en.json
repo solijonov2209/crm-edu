@@ -198,7 +198,23 @@
       "late": "Late",
       "excused": "Excused",
       "injured": "Injured"
-    }
+    },
+    "trainingDetails": "Training Details",
+    "evaluation": "Evaluation",
+    "effort": "Effort",
+    "technique": "Technique",
+    "attitude": "Attitude",
+    "teamwork": "Teamwork",
+    "playerRating": "Player Rating",
+    "playerNotes": "Notes for this player...",
+    "media": "Media",
+    "uploadPhotos": "Upload Photos",
+    "uploadVideo": "Upload Video",
+    "noPhotos": "No photos uploaded yet",
+    "noVideos": "No videos uploaded yet",
+    "saveAndComplete": "Save & Complete",
+    "coachNotesPlaceholder": "Write your notes about the training session...",
+    "overallRating": "Overall Rating"
   },
   "matches": {
     "title": "Matches",
