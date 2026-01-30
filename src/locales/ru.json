@@ -198,7 +198,23 @@
       "late": "Опоздал",
       "excused": "Уважительная причина",
       "injured": "Травмирован"
-    }
+    },
+    "trainingDetails": "Детали тренировки",
+    "evaluation": "Оценка",
+    "effort": "Усилия",
+    "technique": "Техника",
+    "attitude": "Отношение",
+    "teamwork": "Командная работа",
+    "playerRating": "Оценка игрока",
+    "playerNotes": "Заметки об игроке...",
+    "media": "Медиа",
+    "uploadPhotos": "Загрузить фото",
+    "uploadVideo": "Загрузить видео",
+    "noPhotos": "Фото пока не загружены",
+    "noVideos": "Видео пока не загружены",
+    "saveAndComplete": "Сохранить и завершить",
+    "coachNotesPlaceholder": "Напишите заметки о тренировке...",
+    "overallRating": "Общая оценка"
   },
   "matches": {
     "title": "Матчи",

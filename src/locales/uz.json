@@ -198,7 +198,23 @@
       "late": "Kechikkan",
       "excused": "Sababli",
       "injured": "Jarohatli"
-    }
+    },
+    "trainingDetails": "Mashg'ulot tafsilotlari",
+    "evaluation": "Baholash",
+    "effort": "Harakat",
+    "technique": "Texnika",
+    "attitude": "Munosabat",
+    "teamwork": "Jamoaviy ish",
+    "playerRating": "O'yinchi bahosi",
+    "playerNotes": "Bu o'yinchi uchun izohlar...",
+    "media": "Media",
+    "uploadPhotos": "Rasm yuklash",
+    "uploadVideo": "Video yuklash",
+    "noPhotos": "Hali rasmlar yuklanmagan",
+    "noVideos": "Hali videolar yuklanmagan",
+    "saveAndComplete": "Saqlash va yakunlash",
+    "coachNotesPlaceholder": "Mashg'ulot haqida izohlaringizni yozing...",
+    "overallRating": "Umumiy baho"
   },
   "matches": {
     "title": "O'yinlar",
