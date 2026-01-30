@@ -3,8 +3,9 @@ import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { trainingsAPI, teamsAPI, playersAPI } from '../../utils/api';
+import { useAuth } from '../../context/AuthContext';
 import { Card, Loading, Button, Input, Select, Modal, Badge, EmptyState, ConfirmDialog, Avatar } from '../../components/common';
-import { Plus, Calendar, Edit, Trash2, Users, CheckCircle, XCircle, Clock, Camera, Video, Star, MessageSquare, Save, Eye } from 'lucide-react';
+import { Plus, Calendar, Edit, Trash2, Users, CheckCircle, XCircle, Clock, Camera, Video, Star, MessageSquare, Save, Eye, Link, X, Play } from 'lucide-react';
 import { formatDate, getStatusColor, trainingTypes } from '../../utils/helpers';
 import toast from 'react-hot-toast';
 
@@ -89,7 +90,7 @@ const TrainingForm = ({ training, teams, onSubmit, onClose, loading }) => {
 };
 
 // Training Detail Modal with Attendance, Evaluation, and Media
-const TrainingDetailModal = ({ training, onClose, t }) => {
+const TrainingDetailModal = ({ training, onClose, t, isReadOnly = false }) => {
   const queryClient = useQueryClient();
   const photoInputRef = useRef(null);
   const videoInputRef = useRef(null);
@@ -98,6 +99,12 @@ const TrainingDetailModal = ({ training, onClose, t }) => {
   const [coachNotes, setCoachNotes] = useState(training?.coachNotes || '');
   const [overallRating, setOverallRating] = useState(training?.overallRating || 5);
   const [saving, setSaving] = useState(false);
+
+  // Photo/Video preview states
+  const [photoPreview, setPhotoPreview] = useState([]);
+  const [videoPreview, setVideoPreview] = useState(null);
+  const [youtubeLink, setYoutubeLink] = useState('');
+  const [showYoutubeInput, setShowYoutubeInput] = useState(false);
 
   // Fetch team players
   const { data: playersData, isLoading: playersLoading } = useQuery({
@@ -196,35 +203,110 @@ const TrainingDetailModal = ({ training, onClose, t }) => {
     }
   };
 
-  const handlePhotoUpload = async (e) => {
-    const files = e.target.files;
+  // Handle photo selection for preview
+  const handlePhotoSelect = (e) => {
+    const files = Array.from(e.target.files);
     if (files.length === 0) return;
 
+    const previews = files.map(file => ({
+      file,
+      url: URL.createObjectURL(file),
+      name: file.name
+    }));
+    setPhotoPreview(previews);
+  };
+
+  // Confirm and upload photos
+  const handlePhotoUpload = async () => {
+    if (photoPreview.length === 0) return;
+
     const formData = new FormData();
-    for (let i = 0; i < files.length; i++) {
-      formData.append('photos', files[i]);
-    }
+    photoPreview.forEach(p => formData.append('photos', p.file));
 
     try {
       await trainingsAPI.uploadPhotos(training._id, formData);
       queryClient.invalidateQueries(['trainings']);
       toast.success(t('common.success'));
+      // Clear preview
+      photoPreview.forEach(p => URL.revokeObjectURL(p.url));
+      setPhotoPreview([]);
     } catch (error) {
       toast.error(error.response?.data?.message || t('common.error'));
     }
   };
 
-  const handleVideoUpload = async (e) => {
+  // Cancel photo upload
+  const cancelPhotoUpload = () => {
+    photoPreview.forEach(p => URL.revokeObjectURL(p.url));
+    setPhotoPreview([]);
+  };
+
+  // Handle video selection for preview
+  const handleVideoSelect = (e) => {
     const file = e.target.files[0];
     if (!file) return;
 
+    setVideoPreview({
+      file,
+      url: URL.createObjectURL(file),
+      name: file.name
+    });
+  };
+
+  // Confirm and upload video
+  const handleVideoUpload = async () => {
+    if (!videoPreview) return;
+
     const formData = new FormData();
-    formData.append('video', file);
+    formData.append('video', videoPreview.file);
 
     try {
       await trainingsAPI.uploadVideo(training._id, formData);
       queryClient.invalidateQueries(['trainings']);
       toast.success(t('common.success'));
+      URL.revokeObjectURL(videoPreview.url);
+      setVideoPreview(null);
+    } catch (error) {
+      toast.error(error.response?.data?.message || t('common.error'));
+    }
+  };
+
+  // Cancel video upload
+  const cancelVideoUpload = () => {
+    if (videoPreview) {
+      URL.revokeObjectURL(videoPreview.url);
+      setVideoPreview(null);
+    }
+  };
+
+  // Extract YouTube video ID
+  const getYoutubeVideoId = (url) => {
+    const regex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/;
+    const match = url.match(regex);
+    return match ? match[1] : null;
+  };
+
+  // Add YouTube link
+  const handleAddYoutubeLink = async () => {
+    const videoId = getYoutubeVideoId(youtubeLink);
+    if (!videoId) {
+      toast.error(t('trainings.invalidYoutubeLink'));
+      return;
+    }
+
+    try {
+      await trainingsAPI.update(training._id, {
+        videos: [...(training.videos || []), {
+          url: youtubeLink,
+          type: 'youtube',
+          videoId: videoId,
+          uploadedAt: new Date()
+        }]
+      });
+      queryClient.invalidateQueries(['trainings']);
+      toast.success(t('common.success'));
+      setYoutubeLink('');
+      setShowYoutubeInput(false);
     } catch (error) {
       toast.error(error.response?.data?.message || t('common.error'));
     }
@@ -311,19 +393,29 @@ const TrainingDetailModal = ({ training, onClose, t }) => {
                       </div>
                     </div>
                     <div className="flex gap-1 flex-wrap justify-end">
-                      {attendanceStatuses.map((status) => (
-                        <button
-                          key={status.value}
-                          onClick={() => updatePlayerAttendance(player._id, 'status', status.value)}
-                          className={`px-2 py-1 text-xs font-medium rounded-full transition-colors ${
-                            playerAtt.status === status.value
-                              ? `${status.color} text-white`
-                              : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
-                          }`}
-                        >
-                          {status.label}
-                        </button>
-                      ))}
+                      {isReadOnly ? (
+                        // Read-only view for admin
+                        <span className={`px-3 py-1 text-xs font-medium rounded-full text-white ${
+                          attendanceStatuses.find(s => s.value === playerAtt.status)?.color || 'bg-gray-500'
+                        }`}>
+                          {attendanceStatuses.find(s => s.value === playerAtt.status)?.label || playerAtt.status}
+                        </span>
+                      ) : (
+                        // Editable for coaches
+                        attendanceStatuses.map((status) => (
+                          <button
+                            key={status.value}
+                            onClick={() => updatePlayerAttendance(player._id, 'status', status.value)}
+                            className={`px-2 py-1 text-xs font-medium rounded-full transition-colors ${
+                              playerAtt.status === status.value
+                                ? `${status.color} text-white`
+                                : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
+                            }`}
+                          >
+                            {status.label}
+                          </button>
+                        ))
+                      )}
                     </div>
                   </div>
                 );
@@ -358,6 +450,13 @@ const TrainingDetailModal = ({ training, onClose, t }) => {
                         </p>
                         <p className="text-xs text-gray-500">#{player.jerseyNumber}</p>
                       </div>
+                      {/* Show rating badge for admin view */}
+                      {isReadOnly && (
+                        <div className="ml-auto flex items-center gap-1">
+                          <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
+                          <span className="font-bold text-gray-900">{playerAtt.rating || '-'}/10</span>
+                        </div>
+                      )}
                     </div>
 
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-4">
@@ -366,54 +465,81 @@ const TrainingDetailModal = ({ training, onClose, t }) => {
                           <label className="text-xs text-gray-500 block mb-1">
                             {t(`trainings.${metric}`)}
                           </label>
-                          <div className="flex items-center gap-2">
-                            <input
-                              type="range"
-                              min="1"
-                              max="10"
-                              value={playerAtt.performance?.[metric] || 5}
-                              onChange={(e) => updatePlayerAttendance(player._id, `performance.${metric}`, parseInt(e.target.value))}
-                              className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
-                            />
-                            <span className="text-sm font-bold text-primary-600 w-6">
-                              {playerAtt.performance?.[metric] || 5}
-                            </span>
-                          </div>
+                          {isReadOnly ? (
+                            // Read-only view for admin
+                            <div className="flex items-center gap-2">
+                              <div className="flex-1 h-2 bg-gray-200 rounded-lg overflow-hidden">
+                                <div
+                                  className="h-full bg-primary-500 rounded-lg"
+                                  style={{ width: `${((playerAtt.performance?.[metric] || 5) / 10) * 100}%` }}
+                                />
+                              </div>
+                              <span className="text-sm font-bold text-primary-600 w-6">
+                                {playerAtt.performance?.[metric] || 5}
+                              </span>
+                            </div>
+                          ) : (
+                            // Editable for coaches
+                            <div className="flex items-center gap-2">
+                              <input
+                                type="range"
+                                min="1"
+                                max="10"
+                                value={playerAtt.performance?.[metric] || 5}
+                                onChange={(e) => updatePlayerAttendance(player._id, `performance.${metric}`, parseInt(e.target.value))}
+                                className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                              />
+                              <span className="text-sm font-bold text-primary-600 w-6">
+                                {playerAtt.performance?.[metric] || 5}
+                              </span>
+                            </div>
+                          )}
                         </div>
                       ))}
                     </div>
 
-                    <div className="flex items-center gap-4">
-                      <div className="flex-1">
-                        <label className="text-xs text-gray-500 block mb-1">
-                          {t('trainings.playerRating')}
-                        </label>
-                        <div className="flex items-center gap-1">
-                          {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((num) => (
-                            <button
-                              key={num}
-                              onClick={() => updatePlayerAttendance(player._id, 'rating', num)}
-                              className={`w-7 h-7 rounded text-xs font-bold transition-colors ${
-                                num <= (playerAtt.rating || 5)
-                                  ? 'bg-yellow-400 text-white'
-                                  : 'bg-gray-200 text-gray-500 hover:bg-gray-300'
-                              }`}
-                            >
-                              {num}
-                            </button>
-                          ))}
+                    {!isReadOnly && (
+                      <div className="flex items-center gap-4">
+                        <div className="flex-1">
+                          <label className="text-xs text-gray-500 block mb-1">
+                            {t('trainings.playerRating')}
+                          </label>
+                          <div className="flex items-center gap-1">
+                            {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((num) => (
+                              <button
+                                key={num}
+                                onClick={() => updatePlayerAttendance(player._id, 'rating', num)}
+                                className={`w-7 h-7 rounded text-xs font-bold transition-colors ${
+                                  num <= (playerAtt.rating || 5)
+                                    ? 'bg-yellow-400 text-white'
+                                    : 'bg-gray-200 text-gray-500 hover:bg-gray-300'
+                                }`}
+                              >
+                                {num}
+                              </button>
+                            ))}
+                          </div>
                         </div>
                       </div>
-                    </div>
+                    )}
 
+                    {/* Notes - show for both, but read-only for admin */}
                     <div className="mt-3">
-                      <input
-                        type="text"
-                        placeholder={t('trainings.playerNotes')}
-                        value={playerAtt.notes || ''}
-                        onChange={(e) => updatePlayerAttendance(player._id, 'notes', e.target.value)}
-                        className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500"
-                      />
+                      {isReadOnly ? (
+                        playerAtt.notes && (
+                          <p className="text-sm text-gray-600 italic bg-white px-3 py-2 rounded-lg border border-gray-100">
+                            {playerAtt.notes}
+                          </p>
+                        )
+                      ) : (
+                        <input
+                          type="text"
+                          placeholder={t('trainings.playerNotes')}
+                          value={playerAtt.notes || ''}
+                          onChange={(e) => updatePlayerAttendance(player._id, 'notes', e.target.value)}
+                          className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500"
+                        />
+                      )}
                     </div>
                   </div>
                 );
@@ -429,34 +555,68 @@ const TrainingDetailModal = ({ training, onClose, t }) => {
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 {t('trainings.overallRating')}
               </label>
-              <div className="flex items-center gap-2">
-                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((num) => (
-                  <button
-                    key={num}
-                    onClick={() => setOverallRating(num)}
-                    className={`w-10 h-10 rounded-lg text-lg font-bold transition-colors ${
-                      num <= overallRating
-                        ? 'bg-yellow-400 text-white'
-                        : 'bg-gray-200 text-gray-500 hover:bg-gray-300'
-                    }`}
-                  >
-                    {num}
-                  </button>
-                ))}
-              </div>
+              {isReadOnly ? (
+                // Read-only view for admin
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-1">
+                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((num) => (
+                      <div
+                        key={num}
+                        className={`w-10 h-10 rounded-lg text-lg font-bold flex items-center justify-center ${
+                          num <= overallRating
+                            ? 'bg-yellow-400 text-white'
+                            : 'bg-gray-200 text-gray-400'
+                        }`}
+                      >
+                        {num}
+                      </div>
+                    ))}
+                  </div>
+                  <span className="text-2xl font-bold text-gray-900">{overallRating}/10</span>
+                </div>
+              ) : (
+                // Editable for coaches
+                <div className="flex items-center gap-2">
+                  {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((num) => (
+                    <button
+                      key={num}
+                      onClick={() => setOverallRating(num)}
+                      className={`w-10 h-10 rounded-lg text-lg font-bold transition-colors ${
+                        num <= overallRating
+                          ? 'bg-yellow-400 text-white'
+                          : 'bg-gray-200 text-gray-500 hover:bg-gray-300'
+                      }`}
+                    >
+                      {num}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 {t('trainings.coachNotes')}
               </label>
-              <textarea
-                rows={6}
-                value={coachNotes}
-                onChange={(e) => setCoachNotes(e.target.value)}
-                placeholder={t('trainings.coachNotesPlaceholder')}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-              />
+              {isReadOnly ? (
+                // Read-only view for admin
+                <div className="bg-gray-50 rounded-lg p-4 min-h-[150px]">
+                  {coachNotes ? (
+                    <p className="text-gray-700 whitespace-pre-wrap">{coachNotes}</p>
+                  ) : (
+                    <p className="text-gray-400 italic">{t('trainings.noNotes')}</p>
+                  )}
+                </div>
+              ) : (
+                // Editable for coaches
+                <textarea
+                  rows={6}
+                  value={coachNotes}
+                  onChange={(e) => setCoachNotes(e.target.value)}
+                  placeholder={t('trainings.coachNotesPlaceholder')}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                />
+              )}
             </div>
           </div>
         )}
@@ -468,30 +628,62 @@ const TrainingDetailModal = ({ training, onClose, t }) => {
             <div>
               <div className="flex items-center justify-between mb-3">
                 <h3 className="font-medium text-gray-900">{t('trainings.photos')}</h3>
-                <Button
-                  variant="secondary"
-                  size="small"
-                  icon={Camera}
-                  onClick={() => photoInputRef.current?.click()}
-                >
-                  {t('trainings.uploadPhotos')}
-                </Button>
-                <input
-                  ref={photoInputRef}
-                  type="file"
-                  accept="image/*"
-                  multiple
-                  onChange={handlePhotoUpload}
-                  className="hidden"
-                />
+                {!isReadOnly && (
+                  <>
+                    <Button
+                      variant="secondary"
+                      size="small"
+                      icon={Camera}
+                      onClick={() => photoInputRef.current?.click()}
+                    >
+                      {t('trainings.uploadPhotos')}
+                    </Button>
+                    <input
+                      ref={photoInputRef}
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      onChange={handlePhotoSelect}
+                      className="hidden"
+                    />
+                  </>
+                )}
               </div>
+
+              {/* Photo Preview Before Upload */}
+              {photoPreview.length > 0 && (
+                <div className="mb-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                  <p className="text-sm text-blue-700 mb-3 font-medium">{t('trainings.previewBeforeUpload')}</p>
+                  <div className="grid grid-cols-4 gap-2 mb-3">
+                    {photoPreview.map((photo, index) => (
+                      <div key={index} className="relative aspect-square rounded-lg overflow-hidden bg-gray-100">
+                        <img src={photo.url} alt={photo.name} className="w-full h-full object-cover" />
+                        <button
+                          onClick={() => {
+                            URL.revokeObjectURL(photo.url);
+                            setPhotoPreview(prev => prev.filter((_, i) => i !== index));
+                          }}
+                          className="absolute top-1 right-1 p-1 bg-red-500 text-white rounded-full hover:bg-red-600"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="flex gap-2">
+                    <Button size="small" onClick={handlePhotoUpload}>{t('common.upload')}</Button>
+                    <Button size="small" variant="secondary" onClick={cancelPhotoUpload}>{t('common.cancel')}</Button>
+                  </div>
+                </div>
+              )}
+
               <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
                 {training.photos?.map((photo, index) => (
                   <div key={index} className="aspect-square rounded-lg overflow-hidden bg-gray-100">
                     <img src={photo.url} alt={photo.caption || ''} className="w-full h-full object-cover" />
                   </div>
                 ))}
-                {(!training.photos || training.photos.length === 0) && (
+                {(!training.photos || training.photos.length === 0) && photoPreview.length === 0 && (
                   <div className="col-span-full text-center py-8 text-gray-500">
                     {t('trainings.noPhotos')}
                   </div>
@@ -503,29 +695,97 @@ const TrainingDetailModal = ({ training, onClose, t }) => {
             <div>
               <div className="flex items-center justify-between mb-3">
                 <h3 className="font-medium text-gray-900">{t('trainings.videos')}</h3>
-                <Button
-                  variant="secondary"
-                  size="small"
-                  icon={Video}
-                  onClick={() => videoInputRef.current?.click()}
-                >
-                  {t('trainings.uploadVideo')}
-                </Button>
-                <input
-                  ref={videoInputRef}
-                  type="file"
-                  accept="video/*"
-                  onChange={handleVideoUpload}
-                  className="hidden"
-                />
+                {!isReadOnly && (
+                  <div className="flex gap-2">
+                    <Button
+                      variant="secondary"
+                      size="small"
+                      icon={Link}
+                      onClick={() => setShowYoutubeInput(!showYoutubeInput)}
+                    >
+                      YouTube
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      size="small"
+                      icon={Video}
+                      onClick={() => videoInputRef.current?.click()}
+                    >
+                      {t('trainings.uploadVideo')}
+                    </Button>
+                    <input
+                      ref={videoInputRef}
+                      type="file"
+                      accept="video/*"
+                      onChange={handleVideoSelect}
+                      className="hidden"
+                    />
+                  </div>
+                )}
               </div>
+
+              {/* YouTube Link Input */}
+              {showYoutubeInput && (
+                <div className="mb-4 p-4 bg-red-50 rounded-lg border border-red-200">
+                  <p className="text-sm text-red-700 mb-3 font-medium">{t('trainings.addYoutubeLink')}</p>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={youtubeLink}
+                      onChange={(e) => setYoutubeLink(e.target.value)}
+                      placeholder="https://www.youtube.com/watch?v=..."
+                      className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500"
+                    />
+                    <Button size="small" onClick={handleAddYoutubeLink}>{t('common.add')}</Button>
+                    <Button size="small" variant="secondary" onClick={() => { setShowYoutubeInput(false); setYoutubeLink(''); }}>
+                      {t('common.cancel')}
+                    </Button>
+                  </div>
+                  {youtubeLink && getYoutubeVideoId(youtubeLink) && (
+                    <div className="mt-3">
+                      <p className="text-xs text-gray-500 mb-2">{t('trainings.preview')}:</p>
+                      <div className="aspect-video w-64 rounded-lg overflow-hidden">
+                        <iframe
+                          src={`https://www.youtube.com/embed/${getYoutubeVideoId(youtubeLink)}`}
+                          className="w-full h-full"
+                          allowFullScreen
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Video Preview Before Upload */}
+              {videoPreview && (
+                <div className="mb-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                  <p className="text-sm text-blue-700 mb-3 font-medium">{t('trainings.previewBeforeUpload')}</p>
+                  <div className="aspect-video w-64 rounded-lg overflow-hidden bg-gray-100 mb-3">
+                    <video src={videoPreview.url} controls className="w-full h-full object-cover" />
+                  </div>
+                  <p className="text-xs text-gray-500 mb-2">{videoPreview.name}</p>
+                  <div className="flex gap-2">
+                    <Button size="small" onClick={handleVideoUpload}>{t('common.upload')}</Button>
+                    <Button size="small" variant="secondary" onClick={cancelVideoUpload}>{t('common.cancel')}</Button>
+                  </div>
+                </div>
+              )}
+
               <div className="grid grid-cols-2 gap-3">
                 {training.videos?.map((video, index) => (
                   <div key={index} className="aspect-video rounded-lg overflow-hidden bg-gray-100">
-                    <video src={video.url} controls className="w-full h-full object-cover" />
+                    {video.type === 'youtube' || video.url?.includes('youtube.com') || video.url?.includes('youtu.be') ? (
+                      <iframe
+                        src={`https://www.youtube.com/embed/${video.videoId || getYoutubeVideoId(video.url)}`}
+                        className="w-full h-full"
+                        allowFullScreen
+                      />
+                    ) : (
+                      <video src={video.url} controls className="w-full h-full object-cover" />
+                    )}
                   </div>
                 ))}
-                {(!training.videos || training.videos.length === 0) && (
+                {(!training.videos || training.videos.length === 0) && !videoPreview && (
                   <div className="col-span-full text-center py-8 text-gray-500">
                     {t('trainings.noVideos')}
                   </div>
@@ -541,9 +801,11 @@ const TrainingDetailModal = ({ training, onClose, t }) => {
         <Button variant="secondary" onClick={onClose}>
           {t('common.close')}
         </Button>
-        <Button icon={Save} onClick={handleSaveAttendance} loading={saving}>
-          {t('trainings.saveAndComplete')}
-        </Button>
+        {!isReadOnly && (
+          <Button icon={Save} onClick={handleSaveAttendance} loading={saving}>
+            {t('trainings.saveAndComplete')}
+          </Button>
+        )}
       </div>
     </div>
   );
@@ -551,6 +813,7 @@ const TrainingDetailModal = ({ training, onClose, t }) => {
 
 const Trainings = () => {
   const { t } = useTranslation();
+  const { isAdmin, isCoach } = useAuth();
   const queryClient = useQueryClient();
   const [selectedTeam, setSelectedTeam] = useState('');
   const [showModal, setShowModal] = useState(false);
@@ -774,13 +1037,14 @@ const Trainings = () => {
       <Modal
         isOpen={!!viewingTraining}
         onClose={() => setViewingTraining(null)}
-        title={t('trainings.trainingDetails')}
+        title={isAdmin ? t('trainings.viewTraining') : t('trainings.trainingDetails')}
         size="xlarge"
       >
         <TrainingDetailModal
           training={viewingTraining}
           onClose={() => setViewingTraining(null)}
           t={t}
+          isReadOnly={isAdmin}
         />
       </Modal>
 

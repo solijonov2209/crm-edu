@@ -6,6 +6,7 @@
     "delete": "O'chirish",
     "edit": "Tahrirlash",
     "add": "Qo'shish",
+    "upload": "Yuklash",
     "search": "Qidirish",
     "filter": "Filtrlash",
     "export": "Eksport",
@@ -97,7 +98,9 @@
     "homeVenue": "Uy maydoni",
     "trainingSchedule": "Mashg'ulot jadvali",
     "statistics": "Statistika",
-    "deleteConfirm": "Haqiqatan ham bu jamoani o'chirmoqchimisiz?"
+    "deleteConfirm": "Haqiqatan ham bu jamoani o'chirmoqchimisiz?",
+    "viewTrainings": "Mashg'ulotlarni ko'rish",
+    "teamDetails": "Jamoa tafsilotlari"
   },
   "players": {
     "title": "O'yinchilar",
@@ -200,6 +203,7 @@
       "injured": "Jarohatli"
     },
     "trainingDetails": "Mashg'ulot tafsilotlari",
+    "viewTraining": "Mashg'ulotni ko'rish",
     "evaluation": "Baholash",
     "effort": "Harakat",
     "technique": "Texnika",
@@ -214,7 +218,12 @@
     "noVideos": "Hali videolar yuklanmagan",
     "saveAndComplete": "Saqlash va yakunlash",
     "coachNotesPlaceholder": "Mashg'ulot haqida izohlaringizni yozing...",
-    "overallRating": "Umumiy baho"
+    "overallRating": "Umumiy baho",
+    "previewBeforeUpload": "Yuklashdan oldin ko'rib chiqing",
+    "addYoutubeLink": "YouTube havolasini qo'shing",
+    "invalidYoutubeLink": "Noto'g'ri YouTube havolasi",
+    "preview": "Ko'rib chiqish",
+    "noNotes": "Izohlar yo'q"
   },
   "matches": {
     "title": "O'yinlar",

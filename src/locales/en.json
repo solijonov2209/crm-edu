@@ -6,6 +6,7 @@
     "delete": "Delete",
     "edit": "Edit",
     "add": "Add",
+    "upload": "Upload",
     "search": "Search",
     "filter": "Filter",
     "export": "Export",
@@ -97,7 +98,9 @@
     "homeVenue": "Home Venue",
     "trainingSchedule": "Training Schedule",
     "statistics": "Statistics",
-    "deleteConfirm": "Are you sure you want to delete this team?"
+    "deleteConfirm": "Are you sure you want to delete this team?",
+    "viewTrainings": "View Trainings",
+    "teamDetails": "Team Details"
   },
   "players": {
     "title": "Players",
@@ -200,6 +203,7 @@
       "injured": "Injured"
     },
     "trainingDetails": "Training Details",
+    "viewTraining": "View Training",
     "evaluation": "Evaluation",
     "effort": "Effort",
     "technique": "Technique",
@@ -214,7 +218,12 @@
     "noVideos": "No videos uploaded yet",
     "saveAndComplete": "Save & Complete",
     "coachNotesPlaceholder": "Write your notes about the training session...",
-    "overallRating": "Overall Rating"
+    "overallRating": "Overall Rating",
+    "previewBeforeUpload": "Preview before upload",
+    "addYoutubeLink": "Add YouTube link",
+    "invalidYoutubeLink": "Invalid YouTube link",
+    "preview": "Preview",
+    "noNotes": "No notes available"
   },
   "matches": {
     "title": "Matches",

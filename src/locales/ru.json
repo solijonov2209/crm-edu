@@ -6,6 +6,7 @@
     "delete": "Удалить",
     "edit": "Редактировать",
     "add": "Добавить",
+    "upload": "Загрузить",
     "search": "Поиск",
     "filter": "Фильтр",
     "export": "Экспорт",
@@ -97,7 +98,9 @@
     "homeVenue": "Домашний стадион",
     "trainingSchedule": "Расписание тренировок",
     "statistics": "Статистика",
-    "deleteConfirm": "Вы уверены, что хотите удалить эту команду?"
+    "deleteConfirm": "Вы уверены, что хотите удалить эту команду?",
+    "viewTrainings": "Просмотр тренировок",
+    "teamDetails": "Детали команды"
   },
   "players": {
     "title": "Игроки",
@@ -214,7 +217,13 @@
     "noVideos": "Видео пока не загружены",
     "saveAndComplete": "Сохранить и завершить",
     "coachNotesPlaceholder": "Напишите заметки о тренировке...",
-    "overallRating": "Общая оценка"
+    "overallRating": "Общая оценка",
+    "viewTraining": "Просмотр тренировки",
+    "previewBeforeUpload": "Предпросмотр перед загрузкой",
+    "addYoutubeLink": "Добавить ссылку YouTube",
+    "invalidYoutubeLink": "Неверная ссылка YouTube",
+    "preview": "Предпросмотр",
+    "noNotes": "Заметок нет"
   },
   "matches": {
     "title": "Матчи",
