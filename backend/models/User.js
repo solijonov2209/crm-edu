@@ -41,6 +41,12 @@ const userSchema = new mongoose.Schema({
     type: String,
     default: null
   },
+  // Support multiple teams for coaches
+  teams: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Team'
+  }],
+  // Keep single team for backward compatibility (will be deprecated)
   team: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Team',

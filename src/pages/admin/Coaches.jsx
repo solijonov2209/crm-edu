@@ -10,6 +10,7 @@ import toast from 'react-hot-toast';
 
 const CoachForm = ({ coach, teams, onSubmit, onClose, loading }) => {
   const { t } = useTranslation();
+  const [selectedTeams, setSelectedTeams] = useState(coach?.teams || []);
   const { register, handleSubmit, formState: { errors } } = useForm({
     defaultValues: coach || {
       firstName: '',
@@ -17,17 +18,23 @@ const CoachForm = ({ coach, teams, onSubmit, onClose, loading }) => {
       email: '',
       password: '',
       phone: '',
-      team: '',
     }
   });
 
-  const teamOptions = teams.map(team => ({
-    value: team._id,
-    label: `${team.name} (${team.ageCategory})`
-  }));
+  const toggleTeam = (teamId) => {
+    setSelectedTeams(prev =>
+      prev.includes(teamId)
+        ? prev.filter(id => id !== teamId)
+        : [...prev, teamId]
+    );
+  };
+
+  const onFormSubmit = (data) => {
+    onSubmit({ ...data, teams: selectedTeams });
+  };
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+    <form onSubmit={handleSubmit(onFormSubmit)} className="space-y-4">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Input
           label={t('players.firstName')}
@@ -66,12 +73,40 @@ const CoachForm = ({ coach, teams, onSubmit, onClose, loading }) => {
           label={t('common.phone')}
           {...register('phone')}
         />
-        <Select
-          label={t('coaches.assignTeam')}
-          options={teamOptions}
-          placeholder={`-- ${t('teams.title')} --`}
-          {...register('team')}
-        />
+      </div>
+
+      {/* Multi-select teams */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          {t('coaches.assignTeam')}
+        </label>
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-2 max-h-48 overflow-y-auto p-2 border border-gray-200 rounded-lg">
+          {teams.map(team => (
+            <label
+              key={team._id}
+              className={`flex items-center gap-2 p-2 rounded-lg cursor-pointer transition-colors ${
+                selectedTeams.includes(team._id)
+                  ? 'bg-primary-50 border border-primary-200'
+                  : 'bg-gray-50 hover:bg-gray-100 border border-transparent'
+              }`}
+            >
+              <input
+                type="checkbox"
+                checked={selectedTeams.includes(team._id)}
+                onChange={() => toggleTeam(team._id)}
+                className="w-4 h-4 text-primary-600 rounded"
+              />
+              <span className="text-sm text-gray-700">
+                {team.name} <span className="text-gray-400">({team.ageCategory})</span>
+              </span>
+            </label>
+          ))}
+        </div>
+        {selectedTeams.length > 0 && (
+          <p className="text-xs text-gray-500 mt-1">
+            {selectedTeams.length} {selectedTeams.length === 1 ? 'team' : 'teams'} selected
+          </p>
+        )}
       </div>
 
       <div className="flex justify-end gap-3 pt-4">
@@ -165,9 +200,13 @@ const Coaches = () => {
   };
 
   const openEditModal = (coach) => {
+    // Support both teams array and single team for backward compatibility
+    const coachTeams = coach.teams?.length > 0
+      ? coach.teams.map(t => t._id || t)
+      : (coach.team ? [coach.team._id || coach.team] : []);
     setEditingCoach({
       ...coach,
-      team: coach.team?._id || ''
+      teams: coachTeams
     });
     setShowModal(true);
   };
@@ -223,12 +262,21 @@ const Coaches = () => {
                   )}
                 </div>
 
-                {coach.team ? (
-                  <div className="flex items-center gap-2 p-3 bg-primary-50 rounded-lg mb-4">
+                {/* Display assigned teams - support both teams array and single team */}
+                {(coach.teams?.length > 0 || coach.team) ? (
+                  <div className="flex flex-wrap items-center gap-2 p-3 bg-primary-50 rounded-lg mb-4">
                     <Shield className="w-5 h-5 text-primary-600" />
-                    <span className="text-sm font-medium text-primary-700">
-                      {coach.team.name}
-                    </span>
+                    {coach.teams?.length > 0 ? (
+                      coach.teams.map(team => (
+                        <Badge key={team._id} variant="primary" className="text-xs">
+                          {team.name}
+                        </Badge>
+                      ))
+                    ) : (
+                      <span className="text-sm font-medium text-primary-700">
+                        {coach.team.name}
+                      </span>
+                    )}
                   </div>
                 ) : (
                   <div className="flex items-center gap-2 p-3 bg-gray-50 rounded-lg mb-4">

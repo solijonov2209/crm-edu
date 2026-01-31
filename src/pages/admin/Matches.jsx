@@ -118,13 +118,18 @@ const Matches = () => {
   const [deletingMatch, setDeletingMatch] = useState(null);
 
   // Reset selectedTeam when user changes (coach vs admin)
+  // Support multiple teams for coaches
   useEffect(() => {
-    if (isCoach && user?.team?._id) {
-      setSelectedTeam(user.team._id);
+    if (isCoach) {
+      // Use teams array if available, fallback to single team
+      const coachTeams = user?.teams?.length > 0 ? user.teams : (user?.team ? [user.team] : []);
+      if (coachTeams.length > 0) {
+        setSelectedTeam(coachTeams[0]._id);
+      }
     } else {
       setSelectedTeam('');
     }
-  }, [isCoach, user?.team?._id]);
+  }, [isCoach, user?.teams, user?.team]);
 
   const { data: matchesData, isLoading } = useQuery({
     queryKey: ['matches', selectedTeam],
@@ -201,9 +206,16 @@ const Matches = () => {
     setShowModal(true);
   };
 
-  // For coaches, only show their team; for admins, show all teams
+  // For coaches, show their assigned teams; for admins, show all teams
   const teamOptions = isCoach
-    ? (user?.team ? [{ value: user.team._id, label: user.team.name }] : [])
+    ? (() => {
+        // Use teams array if available, fallback to single team
+        const coachTeams = user?.teams?.length > 0 ? user.teams : (user?.team ? [user.team] : []);
+        return coachTeams.map(team => ({
+          value: team._id,
+          label: `${team.name}${team.ageCategory ? ` (${team.ageCategory})` : ''}`
+        }));
+      })()
     : [
         { value: '', label: t('common.all') },
         ...(teamsData || []).map(team => ({
