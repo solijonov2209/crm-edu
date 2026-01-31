@@ -24,6 +24,7 @@ export const getUsers = async (req, res) => {
     const total = await User.countDocuments(query);
     const users = await User.find(query)
       .populate('team', 'name ageCategory')
+      .populate('teams', 'name ageCategory')
       .sort({ createdAt: -1 })
       .skip((page - 1) * limit)
       .limit(parseInt(limit));
@@ -77,7 +78,7 @@ export const getUser = async (req, res) => {
 // @access  Private/Admin
 export const createUser = async (req, res) => {
   try {
-    const { firstName, lastName, email, password, role, phone, team } = req.body;
+    const { firstName, lastName, email, password, role, phone, team, teams } = req.body;
 
     // Check if user exists
     const existingUser = await User.findOne({ email });
@@ -88,6 +89,9 @@ export const createUser = async (req, res) => {
       });
     }
 
+    // Support both single team and multiple teams
+    const teamsArray = teams || (team ? [team] : []);
+
     const user = await User.create({
       firstName,
       lastName,
@@ -95,12 +99,13 @@ export const createUser = async (req, res) => {
       password,
       role: role || 'coach',
       phone,
-      team
+      team: teamsArray[0] || null, // Keep first team for backward compatibility
+      teams: teamsArray
     });
 
-    // If team is assigned, update team's coach field
-    if (team) {
-      await Team.findByIdAndUpdate(team, { coach: user._id });
+    // Update team's coach field for all assigned teams
+    for (const teamId of teamsArray) {
+      await Team.findByIdAndUpdate(teamId, { $addToSet: { coaches: user._id } });
     }
 
     // Remove password from response
@@ -125,7 +130,7 @@ export const createUser = async (req, res) => {
 // @access  Private/Admin
 export const updateUser = async (req, res) => {
   try {
-    const { firstName, lastName, email, phone, role, team, isActive } = req.body;
+    const { firstName, lastName, email, phone, role, team, teams, isActive } = req.body;
 
     let user = await User.findById(req.params.id);
 
@@ -147,26 +152,33 @@ export const updateUser = async (req, res) => {
       }
     }
 
-    // Handle team assignment change
-    const oldTeamId = user.team?.toString();
-    const newTeamId = team;
+    // Support both single team and multiple teams
+    const newTeams = teams || (team ? [team] : []);
+    const oldTeams = user.teams?.map(t => t.toString()) || [];
 
-    if (oldTeamId !== newTeamId) {
-      // Remove from old team
-      if (oldTeamId) {
-        await Team.findByIdAndUpdate(oldTeamId, { coach: null });
+    // Remove user from teams they're no longer assigned to
+    for (const oldTeamId of oldTeams) {
+      if (!newTeams.includes(oldTeamId)) {
+        await Team.findByIdAndUpdate(oldTeamId, { $pull: { coaches: user._id } });
       }
-      // Add to new team
-      if (newTeamId) {
-        await Team.findByIdAndUpdate(newTeamId, { coach: user._id });
+    }
+
+    // Add user to new teams
+    for (const newTeamId of newTeams) {
+      if (!oldTeams.includes(newTeamId)) {
+        await Team.findByIdAndUpdate(newTeamId, { $addToSet: { coaches: user._id } });
       }
     }
 
     user = await User.findByIdAndUpdate(
       req.params.id,
-      { firstName, lastName, email, phone, role, team, isActive },
+      {
+        firstName, lastName, email, phone, role, isActive,
+        team: newTeams[0] || null, // Keep first team for backward compatibility
+        teams: newTeams
+      },
       { new: true, runValidators: true }
-    ).populate('team');
+    ).populate('team').populate('teams');
 
     res.status(200).json({
       success: true,

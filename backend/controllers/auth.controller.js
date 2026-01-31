@@ -17,7 +17,7 @@ export const login = async (req, res) => {
     }
 
     // Find user and include password
-    const user = await User.findOne({ email }).select('+password').populate('team');
+    const user = await User.findOne({ email }).select('+password').populate('team').populate('teams');
 
     if (!user) {
       return res.status(401).json({
@@ -74,7 +74,7 @@ export const login = async (req, res) => {
 // @access  Private
 export const getMe = async (req, res) => {
   try {
-    const user = await User.findById(req.user._id).populate('team');
+    const user = await User.findById(req.user._id).populate('team').populate('teams');
 
     res.status(200).json({
       success: true,

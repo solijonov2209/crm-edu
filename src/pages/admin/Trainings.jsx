@@ -128,9 +128,10 @@ const TrainingDetailModal = ({ training, onClose, t, isReadOnly = false }) => {
             player: player._id
           };
         }
+        // Default to 'absent' so attendance starts at 0%
         return {
           player: player._id,
-          status: 'present',
+          status: 'absent',
           rating: 5,
           performance: { effort: 5, technique: 5, attitude: 5, teamwork: 5 },
           notes: ''
@@ -163,7 +164,7 @@ const TrainingDetailModal = ({ training, onClose, t, isReadOnly = false }) => {
   const getPlayerAttendance = (playerId) => {
     return attendance.find(a => a.player === playerId) || {
       player: playerId,
-      status: 'present',
+      status: 'absent',
       rating: 5,
       performance: { effort: 5, technique: 5, attitude: 5, teamwork: 5 },
       notes: ''
@@ -312,13 +313,16 @@ const TrainingDetailModal = ({ training, onClose, t, isReadOnly = false }) => {
     }
   };
 
-  const attendanceStatuses = [
-    { value: 'present', label: t('trainings.attendanceStatus.present'), color: 'bg-green-500' },
-    { value: 'absent', label: t('trainings.attendanceStatus.absent'), color: 'bg-red-500' },
-    { value: 'late', label: t('trainings.attendanceStatus.late'), color: 'bg-yellow-500' },
-    { value: 'excused', label: t('trainings.attendanceStatus.excused'), color: 'bg-gray-500' },
-    { value: 'injured', label: t('trainings.attendanceStatus.injured'), color: 'bg-orange-500' },
-  ];
+  // Simplified attendance - just present/absent
+  const isPlayerPresent = (playerId) => {
+    const att = getPlayerAttendance(playerId);
+    return att.status === 'present';
+  };
+
+  const toggleAttendance = (playerId) => {
+    const current = getPlayerAttendance(playerId);
+    updatePlayerAttendance(playerId, 'status', current.status === 'present' ? 'absent' : 'present');
+  };
 
   const tabs = [
     { id: 'attendance', label: t('trainings.attendance'), icon: Users },
@@ -375,7 +379,7 @@ const TrainingDetailModal = ({ training, onClose, t, isReadOnly = false }) => {
               <Loading />
             ) : (
               playersData?.map((player) => {
-                const playerAtt = getPlayerAttendance(player._id);
+                const present = isPlayerPresent(player._id);
                 return (
                   <div key={player._id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                     <div className="flex items-center gap-3">
@@ -392,29 +396,27 @@ const TrainingDetailModal = ({ training, onClose, t, isReadOnly = false }) => {
                         <p className="text-xs text-gray-500">#{player.jerseyNumber} - {player.position}</p>
                       </div>
                     </div>
-                    <div className="flex gap-1 flex-wrap justify-end">
+                    <div className="flex items-center gap-3">
                       {isReadOnly ? (
                         // Read-only view for admin
                         <span className={`px-3 py-1 text-xs font-medium rounded-full text-white ${
-                          attendanceStatuses.find(s => s.value === playerAtt.status)?.color || 'bg-gray-500'
+                          present ? 'bg-green-500' : 'bg-red-500'
                         }`}>
-                          {attendanceStatuses.find(s => s.value === playerAtt.status)?.label || playerAtt.status}
+                          {present ? t('trainings.attendanceStatus.present') : t('trainings.attendanceStatus.absent')}
                         </span>
                       ) : (
-                        // Editable for coaches
-                        attendanceStatuses.map((status) => (
-                          <button
-                            key={status.value}
-                            onClick={() => updatePlayerAttendance(player._id, 'status', status.value)}
-                            className={`px-2 py-1 text-xs font-medium rounded-full transition-colors ${
-                              playerAtt.status === status.value
-                                ? `${status.color} text-white`
-                                : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
-                            }`}
-                          >
-                            {status.label}
-                          </button>
-                        ))
+                        // Simple checkbox for coaches
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={present}
+                            onChange={() => toggleAttendance(player._id)}
+                            className="w-5 h-5 rounded border-gray-300 text-primary-600 focus:ring-primary-500 cursor-pointer"
+                          />
+                          <span className={`text-sm font-medium ${present ? 'text-green-600' : 'text-gray-400'}`}>
+                            {present ? t('trainings.attendanceStatus.present') : t('trainings.attendanceStatus.absent')}
+                          </span>
+                        </label>
                       )}
                     </div>
                   </div>
@@ -822,13 +824,18 @@ const Trainings = () => {
   const [viewingTraining, setViewingTraining] = useState(null);
 
   // Reset selectedTeam when user changes (coach vs admin)
+  // Support multiple teams for coaches
   useEffect(() => {
-    if (isCoach && user?.team?._id) {
-      setSelectedTeam(user.team._id);
+    if (isCoach) {
+      // Use teams array if available, fallback to single team
+      const coachTeams = user?.teams?.length > 0 ? user.teams : (user?.team ? [user.team] : []);
+      if (coachTeams.length > 0) {
+        setSelectedTeam(coachTeams[0]._id);
+      }
     } else {
       setSelectedTeam('');
     }
-  }, [isCoach, user?.team?._id]);
+  }, [isCoach, user?.teams, user?.team]);
 
   const { data: trainingsData, isLoading } = useQuery({
     queryKey: ['trainings', selectedTeam],
@@ -899,9 +906,16 @@ const Trainings = () => {
     setShowModal(true);
   };
 
-  // For coaches, only show their team; for admins, show all teams
+  // For coaches, show their assigned teams; for admins, show all teams
   const teamOptions = isCoach
-    ? (user?.team ? [{ value: user.team._id, label: user.team.name }] : [])
+    ? (() => {
+        // Use teams array if available, fallback to single team
+        const coachTeams = user?.teams?.length > 0 ? user.teams : (user?.team ? [user.team] : []);
+        return coachTeams.map(team => ({
+          value: team._id,
+          label: `${team.name}${team.ageCategory ? ` (${team.ageCategory})` : ''}`
+        }));
+      })()
     : [
         { value: '', label: t('common.all') },
         ...(teamsData || []).map(team => ({

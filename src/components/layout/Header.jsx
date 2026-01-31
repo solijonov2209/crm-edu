@@ -38,8 +38,12 @@ const Header = ({ onMenuClick }) => {
     };
   }, []);
 
-  // Team ID for queries - use user's team for coach, undefined for admin
-  const teamId = isCoach ? user?.team?._id : undefined;
+  // Team IDs for queries - support multiple teams for coaches
+  // For coaches with multiple teams, we fetch all notifications (no team filter)
+  // so they see notifications for all their assigned teams
+  const coachTeams = user?.teams?.length > 0 ? user.teams : (user?.team ? [user.team] : []);
+  // If coach has only 1 team, filter by that team; otherwise fetch all their team notifications
+  const teamId = isCoach ? (coachTeams.length === 1 ? coachTeams[0]._id : undefined) : undefined;
 
   // Fetch upcoming trainings (within 2 days)
   const { data: upcomingTrainings } = useQuery({
