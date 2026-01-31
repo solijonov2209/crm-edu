@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
-import { Menu, Bell, Globe, Calendar, Trophy, Clock, X, ChevronRight } from 'lucide-react';
+import { Menu, Bell, Globe, Calendar, Trophy, Clock } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { trainingsAPI, matchesAPI } from '../../utils/api';
 import { formatDate } from '../../utils/helpers';
@@ -26,53 +26,66 @@ const Header = ({ onMenuClick }) => {
     setLangMenuOpen(false);
   };
 
-  // Calculate date range (today + 2 days)
-  const today = new Date();
-  const twoDaysLater = new Date(today);
-  twoDaysLater.setDate(twoDaysLater.getDate() + 2);
+  // Memoize date calculations
+  const { todayStr, twoDaysLaterStr, today } = useMemo(() => {
+    const now = new Date();
+    const later = new Date(now);
+    later.setDate(later.getDate() + 2);
+    return {
+      today: now,
+      todayStr: now.toISOString().split('T')[0],
+      twoDaysLaterStr: later.toISOString().split('T')[0]
+    };
+  }, []);
+
+  // Team ID for queries - use user's team for coach, undefined for admin
+  const teamId = isCoach ? user?.team?._id : undefined;
 
   // Fetch upcoming trainings (within 2 days)
   const { data: upcomingTrainings } = useQuery({
-    queryKey: ['upcoming-trainings', user?.team?._id],
+    queryKey: ['upcoming-trainings', teamId, todayStr],
     queryFn: () => trainingsAPI.getAll({
-      team: isCoach ? user?.team?._id : undefined,
-      startDate: today.toISOString().split('T')[0],
-      endDate: twoDaysLater.toISOString().split('T')[0],
+      team: teamId,
+      startDate: todayStr,
+      endDate: twoDaysLaterStr,
       status: 'scheduled',
       limit: 10
     }),
     select: (res) => res.data?.trainings || [],
     enabled: !!user,
-    refetchInterval: 60000, // Refetch every minute
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    refetchInterval: 5 * 60 * 1000, // Refetch every 5 minutes
   });
 
   // Fetch upcoming matches (within 2 days)
   const { data: upcomingMatches } = useQuery({
-    queryKey: ['upcoming-matches', user?.team?._id],
+    queryKey: ['upcoming-matches', teamId, todayStr],
     queryFn: () => matchesAPI.getAll({
-      team: isCoach ? user?.team?._id : undefined,
-      startDate: today.toISOString().split('T')[0],
-      endDate: twoDaysLater.toISOString().split('T')[0],
+      team: teamId,
+      startDate: todayStr,
+      endDate: twoDaysLaterStr,
       status: 'scheduled',
       limit: 10
     }),
     select: (res) => res.data?.matches || [],
     enabled: !!user,
-    refetchInterval: 60000,
+    staleTime: 5 * 60 * 1000,
+    refetchInterval: 5 * 60 * 1000,
   });
 
-  // Combine and sort notifications
-  const notifications = [
-    ...(upcomingTrainings || []).map(t => ({
-      id: t._id,
+  // Memoize notifications to prevent recalculation on every render
+  const notifications = useMemo(() => {
+    const trainings = (upcomingTrainings || []).map(tr => ({
+      id: tr._id,
       type: 'training',
-      title: t.team?.name,
-      date: t.date,
-      time: t.startTime,
-      location: t.location,
-      data: t
-    })),
-    ...(upcomingMatches || []).map(m => ({
+      title: tr.team?.name,
+      date: tr.date,
+      time: tr.startTime,
+      location: tr.location,
+      data: tr
+    }));
+
+    const matches = (upcomingMatches || []).map(m => ({
       id: m._id,
       type: 'match',
       title: `${m.team?.name} vs ${m.opponent?.name}`,
@@ -81,8 +94,10 @@ const Header = ({ onMenuClick }) => {
       venue: m.venue,
       isHome: m.isHome,
       data: m
-    }))
-  ].sort((a, b) => new Date(a.date) - new Date(b.date));
+    }));
+
+    return [...trainings, ...matches].sort((a, b) => new Date(a.date) - new Date(b.date));
+  }, [upcomingTrainings, upcomingMatches]);
 
   // Check if event is today
   const isToday = (dateStr) => {
@@ -198,7 +213,7 @@ const Header = ({ onMenuClick }) => {
                       notif.type === 'match' ? 'bg-orange-100' : 'bg-blue-100'
                     }`}>
                       {notif.type === 'match' ? (
-                        <Trophy className={`w-5 h-5 ${notif.type === 'match' ? 'text-orange-600' : 'text-blue-600'}`} />
+                        <Trophy className="w-5 h-5 text-orange-600" />
                       ) : (
                         <Calendar className="w-5 h-5 text-blue-600" />
                       )}

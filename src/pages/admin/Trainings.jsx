@@ -815,17 +815,25 @@ const Trainings = () => {
   const { t } = useTranslation();
   const { user, isAdmin, isCoach } = useAuth();
   const queryClient = useQueryClient();
-  // For coaches, auto-set to their team
-  const [selectedTeam, setSelectedTeam] = useState(isCoach && user?.team?._id ? user.team._id : '');
+  const [selectedTeam, setSelectedTeam] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [editingTraining, setEditingTraining] = useState(null);
   const [deletingTraining, setDeletingTraining] = useState(null);
   const [viewingTraining, setViewingTraining] = useState(null);
 
+  // Reset selectedTeam when user changes (coach vs admin)
+  useEffect(() => {
+    if (isCoach && user?.team?._id) {
+      setSelectedTeam(user.team._id);
+    } else {
+      setSelectedTeam('');
+    }
+  }, [isCoach, user?.team?._id]);
+
   const { data: trainingsData, isLoading } = useQuery({
     queryKey: ['trainings', selectedTeam],
     queryFn: () => trainingsAPI.getAll({
-      team: selectedTeam,
+      team: selectedTeam || undefined,
       limit: 50
     }),
     select: (res) => res.data,

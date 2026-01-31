@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
@@ -112,16 +112,24 @@ const Matches = () => {
   const { t } = useTranslation();
   const { user, isAdmin, isCoach } = useAuth();
   const queryClient = useQueryClient();
-  // For coaches, auto-set to their team
-  const [selectedTeam, setSelectedTeam] = useState(isCoach && user?.team?._id ? user.team._id : '');
+  const [selectedTeam, setSelectedTeam] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [editingMatch, setEditingMatch] = useState(null);
   const [deletingMatch, setDeletingMatch] = useState(null);
 
+  // Reset selectedTeam when user changes (coach vs admin)
+  useEffect(() => {
+    if (isCoach && user?.team?._id) {
+      setSelectedTeam(user.team._id);
+    } else {
+      setSelectedTeam('');
+    }
+  }, [isCoach, user?.team?._id]);
+
   const { data: matchesData, isLoading } = useQuery({
     queryKey: ['matches', selectedTeam],
     queryFn: () => matchesAPI.getAll({
-      team: selectedTeam,
+      team: selectedTeam || undefined,
       limit: 50
     }),
     select: (res) => res.data,
