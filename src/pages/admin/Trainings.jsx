@@ -813,9 +813,10 @@ const TrainingDetailModal = ({ training, onClose, t, isReadOnly = false }) => {
 
 const Trainings = () => {
   const { t } = useTranslation();
-  const { isAdmin, isCoach } = useAuth();
+  const { user, isAdmin, isCoach } = useAuth();
   const queryClient = useQueryClient();
-  const [selectedTeam, setSelectedTeam] = useState('');
+  // For coaches, auto-set to their team
+  const [selectedTeam, setSelectedTeam] = useState(isCoach && user?.team?._id ? user.team._id : '');
   const [showModal, setShowModal] = useState(false);
   const [editingTraining, setEditingTraining] = useState(null);
   const [deletingTraining, setDeletingTraining] = useState(null);
@@ -890,13 +891,16 @@ const Trainings = () => {
     setShowModal(true);
   };
 
-  const teamOptions = [
-    { value: '', label: t('common.all') },
-    ...(teamsData || []).map(team => ({
-      value: team._id,
-      label: team.name
-    }))
-  ];
+  // For coaches, only show their team; for admins, show all teams
+  const teamOptions = isCoach
+    ? (user?.team ? [{ value: user.team._id, label: user.team.name }] : [])
+    : [
+        { value: '', label: t('common.all') },
+        ...(teamsData || []).map(team => ({
+          value: team._id,
+          label: team.name
+        }))
+      ];
 
   const getStatusIcon = (status) => {
     switch (status) {

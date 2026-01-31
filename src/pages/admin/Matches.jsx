@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { matchesAPI, teamsAPI } from '../../utils/api';
+import { useAuth } from '../../context/AuthContext';
 import { Card, Loading, Button, Input, Select, Modal, Badge, EmptyState, ConfirmDialog } from '../../components/common';
 import { Plus, Trophy, Edit, Trash2, Calendar, MapPin } from 'lucide-react';
 import { formatDate, getStatusColor, getResultColor, formations } from '../../utils/helpers';
@@ -109,8 +110,10 @@ const MatchForm = ({ match, teams, onSubmit, onClose, loading }) => {
 
 const Matches = () => {
   const { t } = useTranslation();
+  const { user, isAdmin, isCoach } = useAuth();
   const queryClient = useQueryClient();
-  const [selectedTeam, setSelectedTeam] = useState('');
+  // For coaches, auto-set to their team
+  const [selectedTeam, setSelectedTeam] = useState(isCoach && user?.team?._id ? user.team._id : '');
   const [showModal, setShowModal] = useState(false);
   const [editingMatch, setEditingMatch] = useState(null);
   const [deletingMatch, setDeletingMatch] = useState(null);
@@ -190,13 +193,16 @@ const Matches = () => {
     setShowModal(true);
   };
 
-  const teamOptions = [
-    { value: '', label: t('common.all') },
-    ...(teamsData || []).map(team => ({
-      value: team._id,
-      label: team.name
-    }))
-  ];
+  // For coaches, only show their team; for admins, show all teams
+  const teamOptions = isCoach
+    ? (user?.team ? [{ value: user.team._id, label: user.team.name }] : [])
+    : [
+        { value: '', label: t('common.all') },
+        ...(teamsData || []).map(team => ({
+          value: team._id,
+          label: team.name
+        }))
+      ];
 
   return (
     <div className="space-y-6">

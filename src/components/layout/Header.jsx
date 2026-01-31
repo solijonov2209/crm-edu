@@ -1,10 +1,17 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Menu, Bell, Globe } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { Menu, Bell, Globe, Calendar, Trophy, Clock, X, ChevronRight } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
+import { trainingsAPI, matchesAPI } from '../../utils/api';
+import { formatDate } from '../../utils/helpers';
+import { Modal, Badge } from '../common';
 
 const Header = ({ onMenuClick }) => {
-  const { i18n } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const { user, isCoach } = useAuth();
   const [langMenuOpen, setLangMenuOpen] = useState(false);
+  const [notifOpen, setNotifOpen] = useState(false);
 
   const languages = [
     { code: 'uz', name: "O'zbek", flag: '🇺🇿' },
@@ -18,6 +25,87 @@ const Header = ({ onMenuClick }) => {
     i18n.changeLanguage(code);
     setLangMenuOpen(false);
   };
+
+  // Calculate date range (today + 2 days)
+  const today = new Date();
+  const twoDaysLater = new Date(today);
+  twoDaysLater.setDate(twoDaysLater.getDate() + 2);
+
+  // Fetch upcoming trainings (within 2 days)
+  const { data: upcomingTrainings } = useQuery({
+    queryKey: ['upcoming-trainings', user?.team?._id],
+    queryFn: () => trainingsAPI.getAll({
+      team: isCoach ? user?.team?._id : undefined,
+      startDate: today.toISOString().split('T')[0],
+      endDate: twoDaysLater.toISOString().split('T')[0],
+      status: 'scheduled',
+      limit: 10
+    }),
+    select: (res) => res.data?.trainings || [],
+    enabled: !!user,
+    refetchInterval: 60000, // Refetch every minute
+  });
+
+  // Fetch upcoming matches (within 2 days)
+  const { data: upcomingMatches } = useQuery({
+    queryKey: ['upcoming-matches', user?.team?._id],
+    queryFn: () => matchesAPI.getAll({
+      team: isCoach ? user?.team?._id : undefined,
+      startDate: today.toISOString().split('T')[0],
+      endDate: twoDaysLater.toISOString().split('T')[0],
+      status: 'scheduled',
+      limit: 10
+    }),
+    select: (res) => res.data?.matches || [],
+    enabled: !!user,
+    refetchInterval: 60000,
+  });
+
+  // Combine and sort notifications
+  const notifications = [
+    ...(upcomingTrainings || []).map(t => ({
+      id: t._id,
+      type: 'training',
+      title: t.team?.name,
+      date: t.date,
+      time: t.startTime,
+      location: t.location,
+      data: t
+    })),
+    ...(upcomingMatches || []).map(m => ({
+      id: m._id,
+      type: 'match',
+      title: `${m.team?.name} vs ${m.opponent?.name}`,
+      date: m.matchDate,
+      time: m.kickoffTime,
+      venue: m.venue,
+      isHome: m.isHome,
+      data: m
+    }))
+  ].sort((a, b) => new Date(a.date) - new Date(b.date));
+
+  // Check if event is today
+  const isToday = (dateStr) => {
+    const eventDate = new Date(dateStr).toDateString();
+    return eventDate === today.toDateString();
+  };
+
+  // Check if event is tomorrow
+  const isTomorrow = (dateStr) => {
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const eventDate = new Date(dateStr).toDateString();
+    return eventDate === tomorrow.toDateString();
+  };
+
+  // Get days until event
+  const getDaysLabel = (dateStr) => {
+    if (isToday(dateStr)) return t('notifications.today');
+    if (isTomorrow(dateStr)) return t('notifications.tomorrow');
+    return t('notifications.inDays', { days: 2 });
+  };
+
+  const notificationCount = notifications.length;
 
   return (
     <header className="sticky top-0 z-30 h-16 bg-white border-b border-gray-200">
@@ -68,12 +156,91 @@ const Header = ({ onMenuClick }) => {
           </div>
 
           {/* Notifications */}
-          <button className="relative p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg">
+          <button
+            onClick={() => setNotifOpen(true)}
+            className="relative p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg"
+          >
             <Bell className="w-5 h-5" />
-            <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full" />
+            {notificationCount > 0 && (
+              <span className="absolute -top-1 -right-1 min-w-5 h-5 px-1.5 flex items-center justify-center bg-red-500 text-white text-xs font-bold rounded-full">
+                {notificationCount}
+              </span>
+            )}
           </button>
         </div>
       </div>
+
+      {/* Notifications Modal */}
+      <Modal
+        isOpen={notifOpen}
+        onClose={() => setNotifOpen(false)}
+        title={t('notifications.title')}
+        size="large"
+      >
+        <div className="space-y-4 max-h-[500px] overflow-y-auto">
+          {notifications.length === 0 ? (
+            <div className="text-center py-8 text-gray-500">
+              {t('notifications.noUpcoming')}
+            </div>
+          ) : (
+            notifications.map((notif) => (
+              <div
+                key={notif.id}
+                className={`p-4 rounded-lg border-l-4 ${
+                  notif.type === 'match'
+                    ? 'bg-orange-50 border-orange-500'
+                    : 'bg-blue-50 border-blue-500'
+                }`}
+              >
+                <div className="flex items-start justify-between">
+                  <div className="flex items-start gap-3">
+                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                      notif.type === 'match' ? 'bg-orange-100' : 'bg-blue-100'
+                    }`}>
+                      {notif.type === 'match' ? (
+                        <Trophy className={`w-5 h-5 ${notif.type === 'match' ? 'text-orange-600' : 'text-blue-600'}`} />
+                      ) : (
+                        <Calendar className="w-5 h-5 text-blue-600" />
+                      )}
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2 mb-1">
+                        <h4 className="font-semibold text-gray-900">{notif.title}</h4>
+                        <Badge className={isToday(notif.date) ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'}>
+                          {getDaysLabel(notif.date)}
+                        </Badge>
+                      </div>
+                      <p className="text-sm text-gray-600">
+                        {notif.type === 'match' ? t('matches.title') : t('trainings.title')}
+                      </p>
+                      <div className="flex items-center gap-4 mt-2 text-sm text-gray-500">
+                        <span className="flex items-center gap-1">
+                          <Calendar className="w-4 h-4" />
+                          {formatDate(notif.date)}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <Clock className="w-4 h-4" />
+                          {notif.time}
+                        </span>
+                      </div>
+                      {(notif.location || notif.venue) && (
+                        <p className="text-sm text-gray-500 mt-1">
+                          📍 {notif.location || notif.venue}
+                          {notif.type === 'match' && (
+                            <span className="ml-2">
+                              ({notif.isHome ? t('matches.home') : t('matches.away')})
+                            </span>
+                          )}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </Modal>
     </header>
   );
 };
