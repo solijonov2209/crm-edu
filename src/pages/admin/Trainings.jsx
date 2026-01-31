@@ -313,16 +313,25 @@ const TrainingDetailModal = ({ training, onClose, t, isReadOnly = false }) => {
     }
   };
 
-  // Simplified attendance - just present/absent
+  // Attendance helpers
   const isPlayerPresent = (playerId) => {
     const att = getPlayerAttendance(playerId);
-    return att.status === 'present';
+    return att.status === 'present' || att.status === 'late';
   };
 
   const toggleAttendance = (playerId) => {
     const current = getPlayerAttendance(playerId);
-    updatePlayerAttendance(playerId, 'status', current.status === 'present' ? 'absent' : 'present');
+    // If currently present/late, mark as absent; otherwise mark as present
+    const newStatus = (current.status === 'present' || current.status === 'late') ? 'absent' : 'present';
+    updatePlayerAttendance(playerId, 'status', newStatus);
   };
+
+  // Special statuses for additional info
+  const specialStatuses = [
+    { value: 'late', label: t('trainings.attendanceStatus.late'), color: 'bg-yellow-500' },
+    { value: 'excused', label: t('trainings.attendanceStatus.excused'), color: 'bg-gray-500' },
+    { value: 'injured', label: t('trainings.attendanceStatus.injured'), color: 'bg-orange-500' },
+  ];
 
   const tabs = [
     { id: 'attendance', label: t('trainings.attendance'), icon: Users },
@@ -379,6 +388,7 @@ const TrainingDetailModal = ({ training, onClose, t, isReadOnly = false }) => {
               <Loading />
             ) : (
               playersData?.map((player) => {
+                const playerAtt = getPlayerAttendance(player._id);
                 const present = isPlayerPresent(player._id);
                 return (
                   <div key={player._id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
@@ -396,27 +406,43 @@ const TrainingDetailModal = ({ training, onClose, t, isReadOnly = false }) => {
                         <p className="text-xs text-gray-500">#{player.jerseyNumber} - {player.position}</p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2">
                       {isReadOnly ? (
-                        // Read-only view for admin
+                        // Read-only view for admin - show status badge
                         <span className={`px-3 py-1 text-xs font-medium rounded-full text-white ${
-                          present ? 'bg-green-500' : 'bg-red-500'
+                          playerAtt.status === 'present' ? 'bg-green-500' :
+                          playerAtt.status === 'late' ? 'bg-yellow-500' :
+                          playerAtt.status === 'excused' ? 'bg-gray-500' :
+                          playerAtt.status === 'injured' ? 'bg-orange-500' : 'bg-red-500'
                         }`}>
-                          {present ? t('trainings.attendanceStatus.present') : t('trainings.attendanceStatus.absent')}
+                          {t(`trainings.attendanceStatus.${playerAtt.status}`)}
                         </span>
                       ) : (
-                        // Simple checkbox for coaches
-                        <label className="flex items-center gap-2 cursor-pointer">
+                        // Editable for coaches
+                        <>
+                          {/* Main checkbox for present/absent */}
                           <input
                             type="checkbox"
                             checked={present}
                             onChange={() => toggleAttendance(player._id)}
-                            className="w-5 h-5 rounded border-gray-300 text-primary-600 focus:ring-primary-500 cursor-pointer"
+                            className="w-5 h-5 rounded border-gray-300 text-green-600 focus:ring-green-500 cursor-pointer"
                           />
-                          <span className={`text-sm font-medium ${present ? 'text-green-600' : 'text-gray-400'}`}>
-                            {present ? t('trainings.attendanceStatus.present') : t('trainings.attendanceStatus.absent')}
-                          </span>
-                        </label>
+                          {/* Special status buttons */}
+                          {specialStatuses.map((status) => (
+                            <button
+                              key={status.value}
+                              onClick={() => updatePlayerAttendance(player._id, 'status', status.value)}
+                              className={`px-2 py-1 text-xs font-medium rounded-full transition-colors ${
+                                playerAtt.status === status.value
+                                  ? `${status.color} text-white`
+                                  : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
+                              }`}
+                              title={status.label}
+                            >
+                              {status.label}
+                            </button>
+                          ))}
+                        </>
                       )}
                     </div>
                   </div>
