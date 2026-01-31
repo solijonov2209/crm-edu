@@ -263,7 +263,9 @@
       "win": "G'alaba",
       "draw": "Durrang",
       "loss": "Mag'lubiyat"
-    }
+    },
+    "home": "Uyda",
+    "away": "Mehmon"
   },
   "tactics": {
     "title": "Taktika muharriri",
@@ -298,5 +300,12 @@
     "exportPlayers": "O'yinchilarni eksport qilish",
     "exportTrainings": "Mashg'ulotlarni eksport qilish",
     "exportMatch": "O'yin hisobotini eksport qilish"
+  },
+  "notifications": {
+    "title": "Bildirishnomalar",
+    "today": "Bugun",
+    "tomorrow": "Ertaga",
+    "inDays": "{{days}} kun ichida",
+    "noUpcoming": "Yaqinlashayotgan tadbirlar yo'q"
   }
 }
