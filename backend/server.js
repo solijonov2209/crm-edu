@@ -43,9 +43,17 @@ const limiter = rateLimit({
 });
 app.use('/api/', limiter);
 
-// CORS configuration
+// CORS configuration - allow local network access
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+  origin: function(origin, callback) {
+    // Allow requests with no origin (mobile apps, curl, etc)
+    if (!origin) return callback(null, true);
+    // Allow localhost and local network IPs
+    if (origin.includes('localhost') || origin.includes('127.0.0.1') || origin.match(/^http:\/\/192\.168\.\d+\.\d+/)) {
+      return callback(null, true);
+    }
+    return callback(null, true); // Allow all for development
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
   allowedHeaders: ['Content-Type', 'Authorization']
@@ -93,9 +101,11 @@ app.use((req, res) => {
 });
 
 const PORT = process.env.PORT || 5000;
+const HOST = '0.0.0.0'; // Tarmoqda ham ishlashi uchun
 
-app.listen(PORT, () => {
-  console.log(`Server running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`);
+app.listen(PORT, HOST, () => {
+  console.log(`Server running in ${process.env.NODE_ENV || 'development'} mode on http://${HOST}:${PORT}`);
+  console.log(`Local network: http://192.168.x.x:${PORT}`);
 });
 
 export default app;
