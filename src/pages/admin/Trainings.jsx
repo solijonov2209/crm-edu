@@ -1130,25 +1130,40 @@ const Trainings = () => {
 
       {/* Filter */}
       <Card className="p-4">
-        <div className="flex flex-col sm:flex-row gap-4 flex-wrap">
-          <Select
-            options={teamOptions}
-            value={selectedTeam}
-            onChange={(e) => setSelectedTeam(e.target.value)}
-            className="w-full sm:w-48"
-          />
-          <Select
-            options={yearOptions}
-            value={selectedYear}
-            onChange={(e) => setSelectedYear(e.target.value)}
-            className="w-full sm:w-32"
-          />
-          <Select
-            options={monthOptions}
-            value={selectedMonth}
-            onChange={(e) => setSelectedMonth(e.target.value)}
-            className="w-full sm:w-40"
-          />
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              {t('teams.title')}
+            </label>
+            <Select
+              options={teamOptions}
+              value={selectedTeam}
+              onChange={(e) => setSelectedTeam(e.target.value)}
+              className="w-full"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              {t('trainings.year')}
+            </label>
+            <Select
+              options={yearOptions}
+              value={selectedYear}
+              onChange={(e) => setSelectedYear(e.target.value)}
+              className="w-full"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              {t('trainings.month')}
+            </label>
+            <Select
+              options={monthOptions}
+              value={selectedMonth}
+              onChange={(e) => setSelectedMonth(e.target.value)}
+              className="w-full"
+            />
+          </div>
         </div>
       </Card>
 
