@@ -452,6 +452,10 @@ const MatchDetailModal = ({ match, onClose, t, isReadOnly = false }) => {
                   (g.player?._id || g.player) === playerId
                 ).length || 0;
 
+                const getPlayerAssists = (playerId) => match.goals?.filter(g =>
+                  (g.assist?._id || g.assist) === playerId
+                ).length || 0;
+
                 const getPlayerCard = (playerId) => match.cards?.find(c =>
                   (c.player?._id || c.player) === playerId
                 );
@@ -482,6 +486,7 @@ const MatchDetailModal = ({ match, onClose, t, isReadOnly = false }) => {
                   if (!player || !pos) return null;
 
                   const goals = getPlayerGoals(player._id);
+                  const assists = getPlayerAssists(player._id);
                   const card = getPlayerCard(player._id);
                   const sub = getPlayerSub(player._id);
                   const rating = getPlayerRating(player._id);
@@ -524,6 +529,14 @@ const MatchDetailModal = ({ match, onClose, t, isReadOnly = false }) => {
                           <div className="absolute -top-1 -left-1 min-w-[18px] h-[18px] bg-white rounded-full shadow flex items-center justify-center px-0.5">
                             <span className="text-xs">⚽</span>
                             {goals > 1 && <span className="text-[10px] font-bold text-gray-700">{goals}</span>}
+                          </div>
+                        )}
+
+                        {/* Assist Indicator (boot icon) */}
+                        {assists > 0 && (
+                          <div className="absolute -top-1 left-5 min-w-[18px] h-[18px] bg-white rounded-full shadow flex items-center justify-center px-0.5">
+                            <span className="text-xs">👟</span>
+                            {assists > 1 && <span className="text-[10px] font-bold text-gray-700">{assists}</span>}
                           </div>
                         )}
 
@@ -589,6 +602,10 @@ const MatchDetailModal = ({ match, onClose, t, isReadOnly = false }) => {
                       (g.player?._id || g.player) === player._id
                     ).length || 0;
 
+                    const assists = match.goals?.filter(g =>
+                      (g.assist?._id || g.assist) === player._id
+                    ).length || 0;
+
                     return (
                       <div key={player._id || index} className="flex items-center gap-3 p-2 bg-gray-50 rounded-lg">
                         <div className="w-10 h-10 rounded-full bg-gray-200 overflow-hidden flex-shrink-0">
@@ -608,6 +625,10 @@ const MatchDetailModal = ({ match, onClose, t, isReadOnly = false }) => {
                             {/* Goal indicator */}
                             {goals > 0 && (
                               <span className="text-sm">⚽{goals > 1 && <span className="text-xs">{goals}</span>}</span>
+                            )}
+                            {/* Assist indicator */}
+                            {assists > 0 && (
+                              <span className="text-sm">👟{assists > 1 && <span className="text-xs">{assists}</span>}</span>
                             )}
                             {/* Card indicator */}
                             {card && (
