@@ -229,7 +229,8 @@
     "uploadPlan": "Upload Plan",
     "noPlan": "No training plan uploaded",
     "uploadPlanHint": "Upload a training plan in PDF or DOCX format",
-    "invalidPlanType": "Only PDF or DOCX files are accepted"
+    "invalidPlanType": "Only PDF or DOCX files are accepted",
+    "filterByMonth": "By month"
   },
   "matches": {
     "title": "Matches",

@@ -937,10 +937,35 @@ const Trainings = () => {
   const { user, isAdmin, isCoach } = useAuth();
   const queryClient = useQueryClient();
   const [selectedTeam, setSelectedTeam] = useState('');
+  const [selectedMonth, setSelectedMonth] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [editingTraining, setEditingTraining] = useState(null);
   const [deletingTraining, setDeletingTraining] = useState(null);
   const [viewingTraining, setViewingTraining] = useState(null);
+
+  // Generate month options for the last 12 months and next 2 months
+  const monthOptions = (() => {
+    const options = [{ value: '', label: t('common.all') }];
+    const now = new Date();
+
+    // Start from 6 months ago to 2 months ahead
+    for (let i = -6; i <= 2; i++) {
+      const date = new Date(now.getFullYear(), now.getMonth() + i, 1);
+      const value = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+      const label = date.toLocaleDateString(t('locale') || 'uz-UZ', { year: 'numeric', month: 'long' });
+      options.push({ value, label });
+    }
+    return options;
+  })();
+
+  // Calculate date range from selected month
+  const getMonthDateRange = (monthStr) => {
+    if (!monthStr) return { startDate: undefined, endDate: undefined };
+    const [year, month] = monthStr.split('-').map(Number);
+    const startDate = new Date(year, month - 1, 1).toISOString().split('T')[0];
+    const endDate = new Date(year, month, 0).toISOString().split('T')[0]; // Last day of month
+    return { startDate, endDate };
+  };
 
   // Reset selectedTeam when user changes (coach vs admin)
   // Support multiple teams for coaches
@@ -956,11 +981,15 @@ const Trainings = () => {
     }
   }, [isCoach, user?.teams, user?.team]);
 
+  const { startDate, endDate } = getMonthDateRange(selectedMonth);
+
   const { data: trainingsData, isLoading } = useQuery({
-    queryKey: ['trainings', selectedTeam],
+    queryKey: ['trainings', selectedTeam, selectedMonth],
     queryFn: () => trainingsAPI.getAll({
       team: selectedTeam || undefined,
-      limit: 50
+      startDate,
+      endDate,
+      limit: 100
     }),
     select: (res) => res.data,
   });
@@ -1071,12 +1100,20 @@ const Trainings = () => {
 
       {/* Filter */}
       <Card className="p-4">
-        <Select
-          options={teamOptions}
-          value={selectedTeam}
-          onChange={(e) => setSelectedTeam(e.target.value)}
-          className="w-full sm:w-64"
-        />
+        <div className="flex flex-col sm:flex-row gap-4">
+          <Select
+            options={teamOptions}
+            value={selectedTeam}
+            onChange={(e) => setSelectedTeam(e.target.value)}
+            className="w-full sm:w-64"
+          />
+          <Select
+            options={monthOptions}
+            value={selectedMonth}
+            onChange={(e) => setSelectedMonth(e.target.value)}
+            className="w-full sm:w-64"
+          />
+        </div>
       </Card>
 
       {/* Trainings List */}

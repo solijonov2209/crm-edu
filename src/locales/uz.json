@@ -229,7 +229,8 @@
     "uploadPlan": "Reja yuklash",
     "noPlan": "Ish rejasi yuklanmagan",
     "uploadPlanHint": "PDF yoki DOCX formatida ish rejasini yuklang",
-    "invalidPlanType": "Faqat PDF yoki DOCX fayllar qabul qilinadi"
+    "invalidPlanType": "Faqat PDF yoki DOCX fayllar qabul qilinadi",
+    "filterByMonth": "Oy bo'yicha"
   },
   "matches": {
     "title": "O'yinlar",

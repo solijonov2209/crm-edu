@@ -229,7 +229,8 @@
     "uploadPlan": "Загрузить план",
     "noPlan": "План тренировки не загружен",
     "uploadPlanHint": "Загрузите план тренировки в формате PDF или DOCX",
-    "invalidPlanType": "Принимаются только файлы PDF или DOCX"
+    "invalidPlanType": "Принимаются только файлы PDF или DOCX",
+    "filterByMonth": "По месяцам"
   },
   "matches": {
     "title": "Матчи",
