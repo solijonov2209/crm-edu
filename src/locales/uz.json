@@ -309,7 +309,9 @@
       "injury": "Jarohat",
       "fatigue": "Charchoq",
       "performance": "Samaradorlik"
-    }
+    },
+    "startingXI": "Asosiy tarkib",
+    "benchPlayers": "Zaxira o'yinchilar"
   },
   "tactics": {
     "title": "Taktika muharriri",

@@ -309,7 +309,9 @@
       "injury": "Injury",
       "fatigue": "Fatigue",
       "performance": "Performance"
-    }
+    },
+    "startingXI": "Starting XI",
+    "benchPlayers": "Bench Players"
   },
   "tactics": {
     "title": "Tactics Editor",
