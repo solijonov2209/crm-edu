@@ -229,7 +229,8 @@
     "uploadPlan": "Upload Plan",
     "noPlan": "No training plan uploaded",
     "uploadPlanHint": "Upload a training plan in PDF or DOCX format",
-    "invalidPlanType": "Only PDF or DOCX files are accepted"
+    "invalidPlanType": "Only PDF or DOCX files are accepted",
+    "filterByMonth": "By month"
   },
   "matches": {
     "title": "Matches",
@@ -313,5 +314,19 @@
     "tomorrow": "Tomorrow",
     "inDays": "In {{days}} days",
     "noUpcoming": "No upcoming events"
+  },
+  "months": {
+    "january": "January",
+    "february": "February",
+    "march": "March",
+    "april": "April",
+    "may": "May",
+    "june": "June",
+    "july": "July",
+    "august": "August",
+    "september": "September",
+    "october": "October",
+    "november": "November",
+    "december": "December"
   }
 }

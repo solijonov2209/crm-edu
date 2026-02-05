@@ -229,7 +229,8 @@
     "uploadPlan": "Загрузить план",
     "noPlan": "План тренировки не загружен",
     "uploadPlanHint": "Загрузите план тренировки в формате PDF или DOCX",
-    "invalidPlanType": "Принимаются только файлы PDF или DOCX"
+    "invalidPlanType": "Принимаются только файлы PDF или DOCX",
+    "filterByMonth": "По месяцам"
   },
   "matches": {
     "title": "Матчи",
@@ -313,5 +314,19 @@
     "tomorrow": "Завтра",
     "inDays": "Через {{days}} дней",
     "noUpcoming": "Нет предстоящих событий"
+  },
+  "months": {
+    "january": "Январь",
+    "february": "Февраль",
+    "march": "Март",
+    "april": "Апрель",
+    "may": "Май",
+    "june": "Июнь",
+    "july": "Июль",
+    "august": "Август",
+    "september": "Сентябрь",
+    "october": "Октябрь",
+    "november": "Ноябрь",
+    "december": "Декабрь"
   }
 }

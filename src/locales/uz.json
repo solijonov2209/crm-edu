@@ -229,7 +229,8 @@
     "uploadPlan": "Reja yuklash",
     "noPlan": "Ish rejasi yuklanmagan",
     "uploadPlanHint": "PDF yoki DOCX formatida ish rejasini yuklang",
-    "invalidPlanType": "Faqat PDF yoki DOCX fayllar qabul qilinadi"
+    "invalidPlanType": "Faqat PDF yoki DOCX fayllar qabul qilinadi",
+    "filterByMonth": "Oy bo'yicha"
   },
   "matches": {
     "title": "O'yinlar",
@@ -313,5 +314,19 @@
     "tomorrow": "Ertaga",
     "inDays": "{{days}} kun ichida",
     "noUpcoming": "Yaqinlashayotgan tadbirlar yo'q"
+  },
+  "months": {
+    "january": "Yanvar",
+    "february": "Fevral",
+    "march": "Mart",
+    "april": "Aprel",
+    "may": "May",
+    "june": "Iyun",
+    "july": "Iyul",
+    "august": "Avgust",
+    "september": "Sentyabr",
+    "october": "Oktyabr",
+    "november": "Noyabr",
+    "december": "Dekabr"
   }
 }
