@@ -937,34 +937,64 @@ const Trainings = () => {
   const { user, isAdmin, isCoach } = useAuth();
   const queryClient = useQueryClient();
   const [selectedTeam, setSelectedTeam] = useState('');
+  const [selectedYear, setSelectedYear] = useState('');
   const [selectedMonth, setSelectedMonth] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [editingTraining, setEditingTraining] = useState(null);
   const [deletingTraining, setDeletingTraining] = useState(null);
   const [viewingTraining, setViewingTraining] = useState(null);
 
-  // Generate month options for the last 12 months and next 2 months
-  const monthOptions = (() => {
+  // Generate year options (last 3 years to next year)
+  const yearOptions = (() => {
     const options = [{ value: '', label: t('common.all') }];
-    const now = new Date();
-
-    // Start from 6 months ago to 2 months ahead
-    for (let i = -6; i <= 2; i++) {
-      const date = new Date(now.getFullYear(), now.getMonth() + i, 1);
-      const value = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-      const label = date.toLocaleDateString(t('locale') || 'uz-UZ', { year: 'numeric', month: 'long' });
-      options.push({ value, label });
+    const currentYear = new Date().getFullYear();
+    for (let year = currentYear - 3; year <= currentYear + 1; year++) {
+      options.push({ value: String(year), label: String(year) });
     }
     return options;
   })();
 
-  // Calculate date range from selected month
-  const getMonthDateRange = (monthStr) => {
-    if (!monthStr) return { startDate: undefined, endDate: undefined };
-    const [year, month] = monthStr.split('-').map(Number);
-    const startDate = new Date(year, month - 1, 1).toISOString().split('T')[0];
-    const endDate = new Date(year, month, 0).toISOString().split('T')[0]; // Last day of month
-    return { startDate, endDate };
+  // Generate month options (1-12)
+  const monthOptions = (() => {
+    const options = [{ value: '', label: t('common.all') }];
+    const monthNames = [
+      t('months.january'), t('months.february'), t('months.march'),
+      t('months.april'), t('months.may'), t('months.june'),
+      t('months.july'), t('months.august'), t('months.september'),
+      t('months.october'), t('months.november'), t('months.december')
+    ];
+    for (let i = 0; i < 12; i++) {
+      options.push({ value: String(i + 1).padStart(2, '0'), label: monthNames[i] });
+    }
+    return options;
+  })();
+
+  // Calculate date range from selected year and month
+  const getDateRange = (year, month) => {
+    if (!year && !month) return { startDate: undefined, endDate: undefined };
+
+    if (year && month) {
+      // Both year and month selected
+      const y = parseInt(year);
+      const m = parseInt(month);
+      const startDate = new Date(y, m - 1, 1).toISOString().split('T')[0];
+      const endDate = new Date(y, m, 0).toISOString().split('T')[0];
+      return { startDate, endDate };
+    } else if (year) {
+      // Only year selected
+      const y = parseInt(year);
+      const startDate = new Date(y, 0, 1).toISOString().split('T')[0];
+      const endDate = new Date(y, 11, 31).toISOString().split('T')[0];
+      return { startDate, endDate };
+    } else if (month) {
+      // Only month selected - use current year
+      const y = new Date().getFullYear();
+      const m = parseInt(month);
+      const startDate = new Date(y, m - 1, 1).toISOString().split('T')[0];
+      const endDate = new Date(y, m, 0).toISOString().split('T')[0];
+      return { startDate, endDate };
+    }
+    return { startDate: undefined, endDate: undefined };
   };
 
   // Reset selectedTeam when user changes (coach vs admin)
@@ -981,10 +1011,10 @@ const Trainings = () => {
     }
   }, [isCoach, user?.teams, user?.team]);
 
-  const { startDate, endDate } = getMonthDateRange(selectedMonth);
+  const { startDate, endDate } = getDateRange(selectedYear, selectedMonth);
 
   const { data: trainingsData, isLoading } = useQuery({
-    queryKey: ['trainings', selectedTeam, selectedMonth],
+    queryKey: ['trainings', selectedTeam, selectedYear, selectedMonth],
     queryFn: () => trainingsAPI.getAll({
       team: selectedTeam || undefined,
       startDate,
@@ -1100,18 +1130,24 @@ const Trainings = () => {
 
       {/* Filter */}
       <Card className="p-4">
-        <div className="flex flex-col sm:flex-row gap-4">
+        <div className="flex flex-col sm:flex-row gap-4 flex-wrap">
           <Select
             options={teamOptions}
             value={selectedTeam}
             onChange={(e) => setSelectedTeam(e.target.value)}
-            className="w-full sm:w-64"
+            className="w-full sm:w-48"
+          />
+          <Select
+            options={yearOptions}
+            value={selectedYear}
+            onChange={(e) => setSelectedYear(e.target.value)}
+            className="w-full sm:w-32"
           />
           <Select
             options={monthOptions}
             value={selectedMonth}
             onChange={(e) => setSelectedMonth(e.target.value)}
-            className="w-full sm:w-64"
+            className="w-full sm:w-40"
           />
         </div>
       </Card>
