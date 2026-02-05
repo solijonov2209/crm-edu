@@ -111,7 +111,7 @@ const MatchForm = ({ match, teams, onSubmit, onClose, loading }) => {
 // Match Detail Modal with Goals, Cards, Substitutions, Statistics
 const MatchDetailModal = ({ match, onClose, t, isReadOnly = false }) => {
   const queryClient = useQueryClient();
-  const [activeTab, setActiveTab] = useState('info');
+  const [activeTab, setActiveTab] = useState('lineup');
   const [saving, setSaving] = useState(false);
 
   // Local state for match data
@@ -263,6 +263,7 @@ const MatchDetailModal = ({ match, onClose, t, isReadOnly = false }) => {
   ];
 
   const tabs = [
+    { id: 'lineup', label: t('matches.lineup'), icon: Users },
     { id: 'info', label: t('matches.matchInfo'), icon: Trophy },
     { id: 'goals', label: t('matches.goals'), icon: Target },
     { id: 'cards', label: t('matches.cards'), icon: CreditCard },
@@ -331,6 +332,251 @@ const MatchDetailModal = ({ match, onClose, t, isReadOnly = false }) => {
 
       {/* Tab Content */}
       <div className="min-h-[350px] max-h-[450px] overflow-y-auto">
+        {/* Lineup Tab - Football Pitch Visualization */}
+        {activeTab === 'lineup' && (
+          <div className="space-y-4">
+            {/* Formation Header */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <span className="font-bold text-gray-900">{match.team?.name}</span>
+                <Badge variant="primary">{match.formation || '4-3-3'}</Badge>
+              </div>
+            </div>
+
+            {/* Football Pitch */}
+            <div className="relative w-full aspect-[3/4] max-h-[400px] bg-gradient-to-b from-green-600 to-green-700 rounded-xl overflow-hidden shadow-lg">
+              {/* Pitch Lines */}
+              <div className="absolute inset-0">
+                {/* Center Line */}
+                <div className="absolute top-1/2 left-0 right-0 h-0.5 bg-white/40" />
+                {/* Center Circle */}
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-20 h-20 border-2 border-white/40 rounded-full" />
+                {/* Top Penalty Box */}
+                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-40 h-16 border-2 border-t-0 border-white/40" />
+                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-20 h-8 border-2 border-t-0 border-white/40" />
+                {/* Bottom Penalty Box */}
+                <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-40 h-16 border-2 border-b-0 border-white/40" />
+                <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-20 h-8 border-2 border-b-0 border-white/40" />
+              </div>
+
+              {/* Players on Pitch */}
+              {(() => {
+                // Formation positions (percentage based)
+                const formationPositions = {
+                  '4-3-3': [
+                    { pos: 'GK', x: 50, y: 92 },
+                    { pos: 'LB', x: 15, y: 75 }, { pos: 'CB', x: 35, y: 78 }, { pos: 'CB', x: 65, y: 78 }, { pos: 'RB', x: 85, y: 75 },
+                    { pos: 'CM', x: 30, y: 55 }, { pos: 'CM', x: 50, y: 50 }, { pos: 'CM', x: 70, y: 55 },
+                    { pos: 'LW', x: 20, y: 25 }, { pos: 'ST', x: 50, y: 20 }, { pos: 'RW', x: 80, y: 25 },
+                  ],
+                  '4-4-2': [
+                    { pos: 'GK', x: 50, y: 92 },
+                    { pos: 'LB', x: 15, y: 75 }, { pos: 'CB', x: 35, y: 78 }, { pos: 'CB', x: 65, y: 78 }, { pos: 'RB', x: 85, y: 75 },
+                    { pos: 'LM', x: 15, y: 50 }, { pos: 'CM', x: 38, y: 55 }, { pos: 'CM', x: 62, y: 55 }, { pos: 'RM', x: 85, y: 50 },
+                    { pos: 'ST', x: 35, y: 22 }, { pos: 'ST', x: 65, y: 22 },
+                  ],
+                  '3-5-2': [
+                    { pos: 'GK', x: 50, y: 92 },
+                    { pos: 'CB', x: 25, y: 78 }, { pos: 'CB', x: 50, y: 80 }, { pos: 'CB', x: 75, y: 78 },
+                    { pos: 'LM', x: 10, y: 50 }, { pos: 'CM', x: 30, y: 55 }, { pos: 'CM', x: 50, y: 50 }, { pos: 'CM', x: 70, y: 55 }, { pos: 'RM', x: 90, y: 50 },
+                    { pos: 'ST', x: 35, y: 22 }, { pos: 'ST', x: 65, y: 22 },
+                  ],
+                  '4-2-3-1': [
+                    { pos: 'GK', x: 50, y: 92 },
+                    { pos: 'LB', x: 15, y: 75 }, { pos: 'CB', x: 35, y: 78 }, { pos: 'CB', x: 65, y: 78 }, { pos: 'RB', x: 85, y: 75 },
+                    { pos: 'CDM', x: 35, y: 60 }, { pos: 'CDM', x: 65, y: 60 },
+                    { pos: 'LW', x: 20, y: 38 }, { pos: 'CAM', x: 50, y: 40 }, { pos: 'RW', x: 80, y: 38 },
+                    { pos: 'ST', x: 50, y: 18 },
+                  ],
+                };
+
+                const positions = formationPositions[match.formation] || formationPositions['4-3-3'];
+
+                // Get starting lineup from match.lineup or use team players
+                const startingPlayers = match.lineup?.filter(l => !l.isSubstitute) || [];
+                const displayPlayers = startingPlayers.length > 0
+                  ? startingPlayers.map((l, i) => ({
+                      ...l,
+                      playerData: playersData?.find(p => p._id === (l.player?._id || l.player)),
+                      position: positions[i] || positions[0]
+                    }))
+                  : (playersData?.slice(0, 11) || []).map((p, i) => ({
+                      player: p._id,
+                      playerData: p,
+                      position: positions[i] || positions[0]
+                    }));
+
+                // Helper functions
+                const getPlayerGoals = (playerId) => match.goals?.filter(g =>
+                  (g.player?._id || g.player) === playerId
+                ).length || 0;
+
+                const getPlayerCard = (playerId) => match.cards?.find(c =>
+                  (c.player?._id || c.player) === playerId
+                );
+
+                const getPlayerSub = (playerId) => match.substitutions?.find(s =>
+                  (s.playerOut?._id || s.playerOut) === playerId
+                );
+
+                const getPlayerRating = (playerId) => {
+                  const rating = match.playerRatings?.find(r =>
+                    (r.player?._id || r.player) === playerId
+                  );
+                  return rating?.rating || null;
+                };
+
+                const getRatingColor = (rating) => {
+                  if (!rating) return 'bg-gray-400';
+                  if (rating >= 8) return 'bg-green-500';
+                  if (rating >= 7) return 'bg-green-400';
+                  if (rating >= 6) return 'bg-yellow-500';
+                  if (rating >= 5) return 'bg-orange-500';
+                  return 'bg-red-500';
+                };
+
+                return displayPlayers.map((item, index) => {
+                  const player = item.playerData;
+                  const pos = item.position || positions[index];
+                  if (!player || !pos) return null;
+
+                  const goals = getPlayerGoals(player._id);
+                  const card = getPlayerCard(player._id);
+                  const sub = getPlayerSub(player._id);
+                  const rating = getPlayerRating(player._id);
+
+                  return (
+                    <div
+                      key={player._id || index}
+                      className="absolute flex flex-col items-center transform -translate-x-1/2 -translate-y-1/2"
+                      style={{ left: `${pos.x}%`, top: `${pos.y}%` }}
+                    >
+                      {/* Player Avatar */}
+                      <div className="relative">
+                        <div className="w-10 h-10 rounded-full bg-white border-2 border-white shadow-lg overflow-hidden">
+                          {player.photo ? (
+                            <img src={player.photo} alt="" className="w-full h-full object-cover" />
+                          ) : (
+                            <div className="w-full h-full bg-gray-300 flex items-center justify-center text-gray-600 font-bold text-sm">
+                              {player.jerseyNumber}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Rating Badge */}
+                        {rating && (
+                          <div className={`absolute -bottom-1 -right-1 w-5 h-5 ${getRatingColor(rating)} rounded text-white text-xs font-bold flex items-center justify-center shadow`}>
+                            {rating}
+                          </div>
+                        )}
+
+                        {/* Card Indicator */}
+                        {card && (
+                          <div className={`absolute -top-1 -right-1 w-3 h-4 rounded-sm shadow ${
+                            card.type === 'yellow' ? 'bg-yellow-400' :
+                            card.type === 'red' ? 'bg-red-500' : 'bg-gradient-to-b from-yellow-400 to-red-500'
+                          }`} />
+                        )}
+
+                        {/* Goal Indicator */}
+                        {goals > 0 && (
+                          <div className="absolute -top-1 -left-1 w-4 h-4 bg-white rounded-full shadow flex items-center justify-center">
+                            <span className="text-xs">⚽</span>
+                          </div>
+                        )}
+
+                        {/* Substitution Indicator */}
+                        {sub && (
+                          <div className="absolute -bottom-1 -left-1 w-4 h-4 bg-red-500 rounded-full shadow flex items-center justify-center">
+                            <span className="text-white text-xs">↓</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Player Name */}
+                      <div className="mt-1 px-1.5 py-0.5 bg-black/60 rounded text-white text-xs font-medium whitespace-nowrap max-w-[70px] truncate">
+                        {player.jerseyNumber}. {player.lastName?.substring(0, 8) || player.firstName?.substring(0, 8)}
+                      </div>
+                    </div>
+                  );
+                });
+              })()}
+            </div>
+
+            {/* Substitutes Section */}
+            <div className="mt-4">
+              <h4 className="font-medium text-gray-900 mb-3">{t('matches.substitutes')}</h4>
+              <div className="space-y-2">
+                {match.substitutions?.length > 0 ? (
+                  match.substitutions.map((sub, index) => {
+                    const playerIn = playersData?.find(p => p._id === (sub.playerIn?._id || sub.playerIn));
+                    const playerOut = playersData?.find(p => p._id === (sub.playerOut?._id || sub.playerOut));
+                    const rating = match.playerRatings?.find(r =>
+                      (r.player?._id || r.player) === (sub.playerIn?._id || sub.playerIn)
+                    )?.rating;
+
+                    const getRatingColor = (r) => {
+                      if (!r) return 'bg-gray-400';
+                      if (r >= 8) return 'bg-green-500';
+                      if (r >= 7) return 'bg-green-400';
+                      if (r >= 6) return 'bg-yellow-500';
+                      return 'bg-orange-500';
+                    };
+
+                    return (
+                      <div key={index} className="flex items-center gap-3 p-2 bg-gray-50 rounded-lg">
+                        <div className="w-10 h-10 rounded-full bg-gray-200 overflow-hidden flex-shrink-0">
+                          {playerIn?.photo ? (
+                            <img src={playerIn.photo} alt="" className="w-full h-full object-cover" />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-gray-500 font-bold">
+                              {playerIn?.jerseyNumber}
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium text-gray-900 truncate">
+                              {playerIn?.jerseyNumber} {playerIn?.firstName} {playerIn?.lastName}
+                            </span>
+                            {/* Card for substitute */}
+                            {(() => {
+                              const card = match.cards?.find(c =>
+                                (c.player?._id || c.player) === (sub.playerIn?._id || sub.playerIn)
+                              );
+                              if (card) {
+                                return (
+                                  <div className={`w-3 h-4 rounded-sm ${
+                                    card.type === 'yellow' ? 'bg-yellow-400' : 'bg-red-500'
+                                  }`} />
+                                );
+                              }
+                              return null;
+                            })()}
+                          </div>
+                          <div className="flex items-center gap-1 text-sm text-green-600">
+                            <span>↑</span>
+                            <span>{sub.minute}'</span>
+                            <span className="text-gray-400 mx-1">|</span>
+                            <span className="text-gray-500">{t('matches.playerOut')}: {playerOut?.lastName || playerOut?.firstName}</span>
+                          </div>
+                        </div>
+                        {rating && (
+                          <div className={`w-8 h-8 ${getRatingColor(rating)} rounded text-white font-bold flex items-center justify-center text-sm`}>
+                            {rating}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })
+                ) : (
+                  <p className="text-gray-500 text-sm">{t('matches.noSubstitutions')}</p>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Info Tab */}
         {activeTab === 'info' && (
           <div className="space-y-4">
