@@ -274,7 +274,42 @@
       "loss": "Mag'lubiyat"
     },
     "home": "Uyda",
-    "away": "Mehmon"
+    "away": "Mehmon",
+    "matchInfo": "O'yin ma'lumotlari",
+    "matchDetails": "O'yin tafsilotlari",
+    "addGoal": "Gol qo'shish",
+    "addCard": "Kartochka qo'shish",
+    "addSubstitution": "Almashtirish qo'shish",
+    "minute": "Daqiqa",
+    "assist": "Assistent",
+    "reason": "Sabab",
+    "type": "Turi",
+    "cardType": "Kartochka turi",
+    "playerOut": "Chiquvchi",
+    "playerIn": "Kiruvchi",
+    "noGoals": "Gollar yo'q",
+    "noCards": "Kartochkalar yo'q",
+    "noSubstitutions": "Almashtirishlar yo'q",
+    "saveAndComplete": "Saqlash va yakunlash",
+    "coachNotesPlaceholder": "O'yin haqida izohlaringizni yozing...",
+    "goalTypes": {
+      "regular": "Oddiy",
+      "penalty": "Penalti",
+      "freeKick": "Jarima zarbasi",
+      "header": "Bosh bilan",
+      "ownGoal": "Avtogol"
+    },
+    "cardTypes": {
+      "yellow": "Sariq",
+      "red": "Qizil",
+      "secondYellow": "Ikkinchi sariq"
+    },
+    "subReasons": {
+      "tactical": "Taktik",
+      "injury": "Jarohat",
+      "fatigue": "Charchoq",
+      "performance": "Samaradorlik"
+    }
   },
   "tactics": {
     "title": "Taktika muharriri",

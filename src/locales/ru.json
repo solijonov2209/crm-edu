@@ -274,7 +274,42 @@
       "loss": "Поражение"
     },
     "home": "Дома",
-    "away": "В гостях"
+    "away": "В гостях",
+    "matchInfo": "Информация о матче",
+    "matchDetails": "Детали матча",
+    "addGoal": "Добавить гол",
+    "addCard": "Добавить карточку",
+    "addSubstitution": "Добавить замену",
+    "minute": "Минута",
+    "assist": "Ассистент",
+    "reason": "Причина",
+    "type": "Тип",
+    "cardType": "Тип карточки",
+    "playerOut": "Выходит",
+    "playerIn": "Входит",
+    "noGoals": "Голов нет",
+    "noCards": "Карточек нет",
+    "noSubstitutions": "Замен нет",
+    "saveAndComplete": "Сохранить и завершить",
+    "coachNotesPlaceholder": "Напишите заметки о матче...",
+    "goalTypes": {
+      "regular": "Обычный",
+      "penalty": "Пенальти",
+      "freeKick": "Штрафной",
+      "header": "Головой",
+      "ownGoal": "Автогол"
+    },
+    "cardTypes": {
+      "yellow": "Желтая",
+      "red": "Красная",
+      "secondYellow": "Вторая желтая"
+    },
+    "subReasons": {
+      "tactical": "Тактическая",
+      "injury": "Травма",
+      "fatigue": "Усталость",
+      "performance": "Результативность"
+    }
   },
   "tactics": {
     "title": "Тактический редактор",

@@ -274,7 +274,42 @@
       "loss": "Loss"
     },
     "home": "Home",
-    "away": "Away"
+    "away": "Away",
+    "matchInfo": "Match Info",
+    "matchDetails": "Match Details",
+    "addGoal": "Add Goal",
+    "addCard": "Add Card",
+    "addSubstitution": "Add Substitution",
+    "minute": "Minute",
+    "assist": "Assist",
+    "reason": "Reason",
+    "type": "Type",
+    "cardType": "Card Type",
+    "playerOut": "Player Out",
+    "playerIn": "Player In",
+    "noGoals": "No goals",
+    "noCards": "No cards",
+    "noSubstitutions": "No substitutions",
+    "saveAndComplete": "Save & Complete",
+    "coachNotesPlaceholder": "Write your notes about the match...",
+    "goalTypes": {
+      "regular": "Regular",
+      "penalty": "Penalty",
+      "freeKick": "Free Kick",
+      "header": "Header",
+      "ownGoal": "Own Goal"
+    },
+    "cardTypes": {
+      "yellow": "Yellow",
+      "red": "Red",
+      "secondYellow": "Second Yellow"
+    },
+    "subReasons": {
+      "tactical": "Tactical",
+      "injury": "Injury",
+      "fatigue": "Fatigue",
+      "performance": "Performance"
+    }
   },
   "tactics": {
     "title": "Tactics Editor",
