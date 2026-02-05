@@ -241,6 +241,47 @@ const MatchDetailModal = ({ match, onClose, t, isReadOnly = false }) => {
     label: `${p.firstName} ${p.lastName} (#${p.jerseyNumber})`
   })) || [];
 
+  // Get starting lineup player IDs
+  const startingPlayerIds = match?.lineup?.filter(l => !l.isSubstitute).map(l => l.player?._id || l.player) || [];
+
+  // If no lineup set, use first 11 players
+  const effectiveStartingIds = startingPlayerIds.length > 0
+    ? startingPlayerIds
+    : (playersData?.slice(0, 11).map(p => p._id) || []);
+
+  // Players who came in as substitutes
+  const playersIn = match?.substitutions?.map(s => s.playerIn?._id || s.playerIn) || [];
+
+  // Players who went out
+  const playersOut = match?.substitutions?.map(s => s.playerOut?._id || s.playerOut) || [];
+
+  // Current field players = starting + came in - went out
+  const currentFieldPlayerIds = [
+    ...effectiveStartingIds.filter(id => !playersOut.includes(id)),
+    ...playersIn
+  ];
+
+  // Bench players = all players - starting lineup - already used as sub in
+  const benchPlayerIds = playersData?.filter(p =>
+    !effectiveStartingIds.includes(p._id) && !playersIn.includes(p._id)
+  ).map(p => p._id) || [];
+
+  // Options for player going out (only field players)
+  const fieldPlayerOptions = playersData?.filter(p =>
+    currentFieldPlayerIds.includes(p._id)
+  ).map(p => ({
+    value: p._id,
+    label: `${p.firstName} ${p.lastName} (#${p.jerseyNumber})`
+  })) || [];
+
+  // Options for player coming in (only bench players)
+  const benchPlayerOptions = playersData?.filter(p =>
+    benchPlayerIds.includes(p._id)
+  ).map(p => ({
+    value: p._id,
+    label: `${p.firstName} ${p.lastName} (#${p.jerseyNumber})`
+  })) || [];
+
   const goalTypes = [
     { value: 'regular', label: t('matches.goalTypes.regular') },
     { value: 'penalty', label: t('matches.goalTypes.penalty') },
@@ -480,8 +521,9 @@ const MatchDetailModal = ({ match, onClose, t, isReadOnly = false }) => {
 
                         {/* Goal Indicator */}
                         {goals > 0 && (
-                          <div className="absolute -top-1 -left-1 w-4 h-4 bg-white rounded-full shadow flex items-center justify-center">
+                          <div className="absolute -top-1 -left-1 min-w-[18px] h-[18px] bg-white rounded-full shadow flex items-center justify-center px-0.5">
                             <span className="text-xs">⚽</span>
+                            {goals > 1 && <span className="text-[10px] font-bold text-gray-700">{goals}</span>}
                           </div>
                         )}
 
@@ -507,59 +549,85 @@ const MatchDetailModal = ({ match, onClose, t, isReadOnly = false }) => {
             <div className="mt-4">
               <h4 className="font-medium text-gray-900 mb-3">{t('matches.substitutes')}</h4>
               <div className="space-y-2">
-                {match.substitutions?.length > 0 ? (
-                  match.substitutions.map((sub, index) => {
-                    const playerIn = playersData?.find(p => p._id === (sub.playerIn?._id || sub.playerIn));
-                    const playerOut = playersData?.find(p => p._id === (sub.playerOut?._id || sub.playerOut));
+                {(() => {
+                  // Get all bench players (not in starting 11)
+                  const startingIds = match.lineup?.filter(l => !l.isSubstitute).map(l => l.player?._id || l.player) || [];
+                  const effectiveStarting = startingIds.length > 0 ? startingIds : (playersData?.slice(0, 11).map(p => p._id) || []);
+
+                  const allBenchPlayers = playersData?.filter(p => !effectiveStarting.includes(p._id)) || [];
+
+                  if (allBenchPlayers.length === 0) {
+                    return <p className="text-gray-500 text-sm">{t('matches.noSubstitutions')}</p>;
+                  }
+
+                  const getRatingColor = (r) => {
+                    if (!r) return 'bg-gray-400';
+                    if (r >= 8) return 'bg-green-500';
+                    if (r >= 7) return 'bg-green-400';
+                    if (r >= 6) return 'bg-yellow-500';
+                    return 'bg-orange-500';
+                  };
+
+                  return allBenchPlayers.map((player, index) => {
+                    // Check if this player came in as a substitute
+                    const subInfo = match.substitutions?.find(s =>
+                      (s.playerIn?._id || s.playerIn) === player._id
+                    );
+                    const playerOut = subInfo ? playersData?.find(p =>
+                      p._id === (subInfo.playerOut?._id || subInfo.playerOut)
+                    ) : null;
+
                     const rating = match.playerRatings?.find(r =>
-                      (r.player?._id || r.player) === (sub.playerIn?._id || sub.playerIn)
+                      (r.player?._id || r.player) === player._id
                     )?.rating;
 
-                    const getRatingColor = (r) => {
-                      if (!r) return 'bg-gray-400';
-                      if (r >= 8) return 'bg-green-500';
-                      if (r >= 7) return 'bg-green-400';
-                      if (r >= 6) return 'bg-yellow-500';
-                      return 'bg-orange-500';
-                    };
+                    const card = match.cards?.find(c =>
+                      (c.player?._id || c.player) === player._id
+                    );
+
+                    const goals = match.goals?.filter(g =>
+                      (g.player?._id || g.player) === player._id
+                    ).length || 0;
 
                     return (
-                      <div key={index} className="flex items-center gap-3 p-2 bg-gray-50 rounded-lg">
+                      <div key={player._id || index} className="flex items-center gap-3 p-2 bg-gray-50 rounded-lg">
                         <div className="w-10 h-10 rounded-full bg-gray-200 overflow-hidden flex-shrink-0">
-                          {playerIn?.photo ? (
-                            <img src={playerIn.photo} alt="" className="w-full h-full object-cover" />
+                          {player.photo ? (
+                            <img src={player.photo} alt="" className="w-full h-full object-cover" />
                           ) : (
                             <div className="w-full h-full flex items-center justify-center text-gray-500 font-bold">
-                              {playerIn?.jerseyNumber}
+                              {player.jerseyNumber}
                             </div>
                           )}
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2">
                             <span className="font-medium text-gray-900 truncate">
-                              {playerIn?.jerseyNumber} {playerIn?.firstName} {playerIn?.lastName}
+                              {player.jerseyNumber} {player.firstName} {player.lastName}
                             </span>
-                            {/* Card for substitute */}
-                            {(() => {
-                              const card = match.cards?.find(c =>
-                                (c.player?._id || c.player) === (sub.playerIn?._id || sub.playerIn)
-                              );
-                              if (card) {
-                                return (
-                                  <div className={`w-3 h-4 rounded-sm ${
-                                    card.type === 'yellow' ? 'bg-yellow-400' : 'bg-red-500'
-                                  }`} />
-                                );
-                              }
-                              return null;
-                            })()}
+                            {/* Goal indicator */}
+                            {goals > 0 && (
+                              <span className="text-sm">⚽{goals > 1 && <span className="text-xs">{goals}</span>}</span>
+                            )}
+                            {/* Card indicator */}
+                            {card && (
+                              <div className={`w-3 h-4 rounded-sm ${
+                                card.type === 'yellow' ? 'bg-yellow-400' : 'bg-red-500'
+                              }`} />
+                            )}
                           </div>
-                          <div className="flex items-center gap-1 text-sm text-green-600">
-                            <span>↑</span>
-                            <span>{sub.minute}'</span>
-                            <span className="text-gray-400 mx-1">|</span>
-                            <span className="text-gray-500">{t('matches.playerOut')}: {playerOut?.lastName || playerOut?.firstName}</span>
-                          </div>
+                          {subInfo ? (
+                            <div className="flex items-center gap-1 text-sm text-green-600">
+                              <span>↑</span>
+                              <span>{subInfo.minute}'</span>
+                              <span className="text-gray-400 mx-1">|</span>
+                              <span className="text-gray-500">{t('matches.playerOut')}: {playerOut?.lastName || playerOut?.firstName}</span>
+                            </div>
+                          ) : (
+                            <div className="text-sm text-gray-400">
+                              {t('matches.benchPlayers')}
+                            </div>
+                          )}
                         </div>
                         {rating && (
                           <div className={`w-8 h-8 ${getRatingColor(rating)} rounded text-white font-bold flex items-center justify-center text-sm`}>
@@ -568,10 +636,8 @@ const MatchDetailModal = ({ match, onClose, t, isReadOnly = false }) => {
                         )}
                       </div>
                     );
-                  })
-                ) : (
-                  <p className="text-gray-500 text-sm">{t('matches.noSubstitutions')}</p>
-                )}
+                  });
+                })()}
               </div>
             </div>
           </div>
@@ -885,7 +951,7 @@ const MatchDetailModal = ({ match, onClose, t, isReadOnly = false }) => {
                       className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-lg"
                     >
                       <option value="">--</option>
-                      {playerOptions.map(p => (
+                      {fieldPlayerOptions.map(p => (
                         <option key={p.value} value={p.value}>{p.label}</option>
                       ))}
                     </select>
@@ -898,7 +964,7 @@ const MatchDetailModal = ({ match, onClose, t, isReadOnly = false }) => {
                       className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-lg"
                     >
                       <option value="">--</option>
-                      {playerOptions.map(p => (
+                      {benchPlayerOptions.map(p => (
                         <option key={p.value} value={p.value}>{p.label}</option>
                       ))}
                     </select>
