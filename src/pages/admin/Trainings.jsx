@@ -942,7 +942,7 @@ const Trainings = () => {
   const [showModal, setShowModal] = useState(false);
   const [editingTraining, setEditingTraining] = useState(null);
   const [deletingTraining, setDeletingTraining] = useState(null);
-  const [viewingTraining, setViewingTraining] = useState(null);
+  const [viewingTrainingId, setViewingTrainingId] = useState(null);
 
   // Generate year options (last 3 years to next year)
   const yearOptions = (() => {
@@ -1023,6 +1023,11 @@ const Trainings = () => {
     }),
     select: (res) => res.data,
   });
+
+  // Get fresh training data from query (auto-updates when query is invalidated)
+  const viewingTraining = viewingTrainingId
+    ? trainingsData?.trainings?.find(t => t._id === viewingTrainingId)
+    : null;
 
   const { data: teamsData } = useQuery({
     queryKey: ['teams'],
@@ -1184,7 +1189,7 @@ const Trainings = () => {
             <Card
               key={training._id}
               className="p-4 hover:shadow-md transition-shadow cursor-pointer"
-              onClick={() => setViewingTraining(training)}
+              onClick={() => setViewingTrainingId(training._id)}
             >
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div className="flex items-start gap-4">
@@ -1219,7 +1224,7 @@ const Trainings = () => {
 
                   <div className="flex gap-1">
                     <button
-                      onClick={() => setViewingTraining(training)}
+                      onClick={() => setViewingTrainingId(training._id)}
                       className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg"
                     >
                       <Eye className="w-4 h-4" />
@@ -1268,14 +1273,14 @@ const Trainings = () => {
 
       {/* Training Detail Modal */}
       <Modal
-        isOpen={!!viewingTraining}
-        onClose={() => setViewingTraining(null)}
+        isOpen={!!viewingTrainingId && !!viewingTraining}
+        onClose={() => setViewingTrainingId(null)}
         title={isAdmin ? t('trainings.viewTraining') : t('trainings.trainingDetails')}
         size="xlarge"
       >
         <TrainingDetailModal
           training={viewingTraining}
-          onClose={() => setViewingTraining(null)}
+          onClose={() => setViewingTrainingId(null)}
           t={t}
           isReadOnly={isAdmin}
         />
