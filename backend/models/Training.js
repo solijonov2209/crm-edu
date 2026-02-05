@@ -101,6 +101,15 @@ const trainingSchema = new mongoose.Schema({
     type: String,
     trim: true
   },
+  // Training plan document (PDF/DOCX)
+  trainingPlan: {
+    url: String,
+    filename: String,
+    originalName: String,
+    mimeType: String,
+    size: Number,
+    uploadedAt: { type: Date, default: Date.now }
+  },
   overallRating: {
     type: Number,
     min: 1,

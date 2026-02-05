@@ -32,7 +32,8 @@
     "noData": "No data found",
     "success": "Success",
     "error": "Error",
-    "warning": "Warning"
+    "warning": "Warning",
+    "download": "Download"
   },
   "auth": {
     "login": "Login",
@@ -223,7 +224,12 @@
     "addYoutubeLink": "Add YouTube link",
     "invalidYoutubeLink": "Invalid YouTube link",
     "preview": "Preview",
-    "noNotes": "No notes available"
+    "noNotes": "No notes available",
+    "trainingPlan": "Training Plan",
+    "uploadPlan": "Upload Plan",
+    "noPlan": "No training plan uploaded",
+    "uploadPlanHint": "Upload a training plan in PDF or DOCX format",
+    "invalidPlanType": "Only PDF or DOCX files are accepted"
   },
   "matches": {
     "title": "Matches",

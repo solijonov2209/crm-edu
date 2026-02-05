@@ -350,6 +350,64 @@ export const uploadTrainingVideo = async (req, res) => {
   }
 };
 
+// @desc    Upload training plan document (PDF/DOCX)
+// @route   POST /api/trainings/:id/plan
+// @access  Private (Coach only)
+export const uploadTrainingPlan = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please upload a file'
+      });
+    }
+
+    const training = await Training.findById(req.params.id);
+
+    if (!training) {
+      return res.status(404).json({
+        success: false,
+        message: 'Training not found'
+      });
+    }
+
+    // Check authorization for coaches
+    if (req.user.role === 'coach' &&
+        (!req.user.team || req.user.team._id.toString() !== training.team.toString())) {
+      return res.status(403).json({
+        success: false,
+        message: 'Not authorized to update this training'
+      });
+    }
+
+    training.trainingPlan = {
+      url: getFileUrl(req, req.file.filename, 'documents'),
+      filename: req.file.filename,
+      originalName: req.file.originalname,
+      mimeType: req.file.mimetype,
+      size: req.file.size,
+      uploadedAt: new Date()
+    };
+
+    await training.save();
+
+    const populatedTraining = await Training.findById(training._id)
+      .populate('team', 'name ageCategory')
+      .populate('coach', 'firstName lastName');
+
+    res.status(200).json({
+      success: true,
+      training: populatedTraining
+    });
+  } catch (error) {
+    console.error('Upload training plan error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error'
+    });
+  }
+};
+
 // @desc    Get training statistics for a team
 // @route   GET /api/trainings/stats/:teamId
 // @access  Private

@@ -7,7 +7,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Ensure upload directories exist
-const uploadDirs = ['photos', 'videos'];
+const uploadDirs = ['photos', 'videos', 'documents'];
 uploadDirs.forEach(dir => {
   const dirPath = path.join(__dirname, '..', 'uploads', dir);
   if (!fs.existsSync(dirPath)) {
@@ -18,8 +18,16 @@ uploadDirs.forEach(dir => {
 // Configure storage
 const storage = multer.diskStorage({
   destination: function(req, file, cb) {
-    const isVideo = file.mimetype.startsWith('video/');
-    const folder = isVideo ? 'videos' : 'photos';
+    let folder = 'photos';
+    if (file.mimetype.startsWith('video/')) {
+      folder = 'videos';
+    } else if (
+      file.mimetype === 'application/pdf' ||
+      file.mimetype === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
+      file.mimetype === 'application/msword'
+    ) {
+      folder = 'documents';
+    }
     cb(null, path.join(__dirname, '..', 'uploads', folder));
   },
   filename: function(req, file, cb) {
@@ -39,8 +47,16 @@ const fileFilter = (req, file, cb) => {
   else if (file.mimetype.startsWith('video/')) {
     cb(null, true);
   }
+  // Accept documents (PDF, DOCX, DOC)
+  else if (
+    file.mimetype === 'application/pdf' ||
+    file.mimetype === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
+    file.mimetype === 'application/msword'
+  ) {
+    cb(null, true);
+  }
   else {
-    cb(new Error('Invalid file type. Only images and videos are allowed.'), false);
+    cb(new Error('Invalid file type. Only images, videos, PDF and DOCX are allowed.'), false);
   }
 };
 
@@ -61,6 +77,9 @@ export const uploadPhotos = upload.array('photos', 10);
 
 // Upload single video
 export const uploadVideo = upload.single('video');
+
+// Upload document (PDF/DOCX)
+export const uploadDocument = upload.single('document');
 
 // Upload mixed (photos and videos)
 export const uploadMedia = upload.fields([

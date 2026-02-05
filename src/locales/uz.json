@@ -32,7 +32,8 @@
     "noData": "Ma'lumot topilmadi",
     "success": "Muvaffaqiyatli",
     "error": "Xatolik",
-    "warning": "Ogohlantirish"
+    "warning": "Ogohlantirish",
+    "download": "Yuklab olish"
   },
   "auth": {
     "login": "Kirish",
@@ -223,7 +224,12 @@
     "addYoutubeLink": "YouTube havolasini qo'shing",
     "invalidYoutubeLink": "Noto'g'ri YouTube havolasi",
     "preview": "Ko'rib chiqish",
-    "noNotes": "Izohlar yo'q"
+    "noNotes": "Izohlar yo'q",
+    "trainingPlan": "Ish rejasi",
+    "uploadPlan": "Reja yuklash",
+    "noPlan": "Ish rejasi yuklanmagan",
+    "uploadPlanHint": "PDF yoki DOCX formatida ish rejasini yuklang",
+    "invalidPlanType": "Faqat PDF yoki DOCX fayllar qabul qilinadi"
   },
   "matches": {
     "title": "O'yinlar",

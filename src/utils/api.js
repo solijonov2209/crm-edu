@@ -100,6 +100,9 @@ export const trainingsAPI = {
   uploadVideo: (id, formData) => api.post(`/trainings/${id}/video`, formData, {
     headers: { 'Content-Type': 'multipart/form-data' }
   }),
+  uploadPlan: (id, formData) => api.post(`/trainings/${id}/plan`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  }),
 };
 
 export const matchesAPI = {
