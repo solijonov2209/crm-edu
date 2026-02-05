@@ -32,7 +32,8 @@
     "noData": "Данные не найдены",
     "success": "Успешно",
     "error": "Ошибка",
-    "warning": "Предупреждение"
+    "warning": "Предупреждение",
+    "download": "Скачать"
   },
   "auth": {
     "login": "Войти",
@@ -223,7 +224,12 @@
     "addYoutubeLink": "Добавить ссылку YouTube",
     "invalidYoutubeLink": "Неверная ссылка YouTube",
     "preview": "Предпросмотр",
-    "noNotes": "Заметок нет"
+    "noNotes": "Заметок нет",
+    "trainingPlan": "План тренировки",
+    "uploadPlan": "Загрузить план",
+    "noPlan": "План тренировки не загружен",
+    "uploadPlanHint": "Загрузите план тренировки в формате PDF или DOCX",
+    "invalidPlanType": "Принимаются только файлы PDF или DOCX"
   },
   "matches": {
     "title": "Матчи",

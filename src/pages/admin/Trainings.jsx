@@ -5,7 +5,7 @@ import { useForm } from 'react-hook-form';
 import { trainingsAPI, teamsAPI, playersAPI } from '../../utils/api';
 import { useAuth } from '../../context/AuthContext';
 import { Card, Loading, Button, Input, Select, Modal, Badge, EmptyState, ConfirmDialog, Avatar } from '../../components/common';
-import { Plus, Calendar, Edit, Trash2, Users, CheckCircle, XCircle, Clock, Camera, Video, Star, MessageSquare, Save, Eye, Link, X, Play } from 'lucide-react';
+import { Plus, Calendar, Edit, Trash2, Users, CheckCircle, XCircle, Clock, Camera, Video, Star, MessageSquare, Save, Eye, Link, X, Play, FileText, Download } from 'lucide-react';
 import { formatDate, getStatusColor, trainingTypes } from '../../utils/helpers';
 import toast from 'react-hot-toast';
 
@@ -94,6 +94,7 @@ const TrainingDetailModal = ({ training, onClose, t, isReadOnly = false }) => {
   const queryClient = useQueryClient();
   const photoInputRef = useRef(null);
   const videoInputRef = useRef(null);
+  const planInputRef = useRef(null);
   const [activeTab, setActiveTab] = useState('attendance');
   const [attendance, setAttendance] = useState([]);
   const [coachNotes, setCoachNotes] = useState(training?.coachNotes || '');
@@ -105,6 +106,7 @@ const TrainingDetailModal = ({ training, onClose, t, isReadOnly = false }) => {
   const [videoPreview, setVideoPreview] = useState(null);
   const [youtubeLink, setYoutubeLink] = useState('');
   const [showYoutubeInput, setShowYoutubeInput] = useState(false);
+  const [planUploading, setPlanUploading] = useState(false);
 
   // Fetch team players
   const { data: playersData, isLoading: playersLoading } = useQuery({
@@ -313,6 +315,33 @@ const TrainingDetailModal = ({ training, onClose, t, isReadOnly = false }) => {
     }
   };
 
+  // Handle training plan upload (PDF/DOCX)
+  const handlePlanUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    // Validate file type
+    const validTypes = ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'application/msword'];
+    if (!validTypes.includes(file.type)) {
+      toast.error(t('trainings.invalidPlanType'));
+      return;
+    }
+
+    setPlanUploading(true);
+    const formData = new FormData();
+    formData.append('document', file);
+
+    try {
+      await trainingsAPI.uploadPlan(training._id, formData);
+      queryClient.invalidateQueries(['trainings']);
+      toast.success(t('common.success'));
+    } catch (error) {
+      toast.error(error.response?.data?.message || t('common.error'));
+    } finally {
+      setPlanUploading(false);
+    }
+  };
+
   // Attendance helpers
   const isPlayerPresent = (playerId) => {
     const att = getPlayerAttendance(playerId);
@@ -334,6 +363,7 @@ const TrainingDetailModal = ({ training, onClose, t, isReadOnly = false }) => {
   ];
 
   const tabs = [
+    { id: 'plan', label: t('trainings.trainingPlan'), icon: FileText },
     { id: 'attendance', label: t('trainings.attendance'), icon: Users },
     { id: 'evaluation', label: t('trainings.evaluation'), icon: Star },
     { id: 'notes', label: t('trainings.coachNotes'), icon: MessageSquare },
@@ -381,6 +411,69 @@ const TrainingDetailModal = ({ training, onClose, t, isReadOnly = false }) => {
 
       {/* Tab Content */}
       <div className="min-h-[400px] max-h-[500px] overflow-y-auto">
+        {/* Training Plan Tab */}
+        {activeTab === 'plan' && (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="font-medium text-gray-900">{t('trainings.trainingPlan')}</h3>
+              {!isReadOnly && (
+                <>
+                  <Button
+                    variant="secondary"
+                    size="small"
+                    icon={FileText}
+                    onClick={() => planInputRef.current?.click()}
+                    loading={planUploading}
+                  >
+                    {t('trainings.uploadPlan')}
+                  </Button>
+                  <input
+                    ref={planInputRef}
+                    type="file"
+                    accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                    onChange={handlePlanUpload}
+                    className="hidden"
+                  />
+                </>
+              )}
+            </div>
+
+            {training.trainingPlan?.url ? (
+              <div className="p-4 bg-gray-50 rounded-lg">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-lg bg-red-100 flex items-center justify-center">
+                    <FileText className="w-6 h-6 text-red-600" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-medium text-gray-900">{training.trainingPlan.originalName}</p>
+                    <p className="text-xs text-gray-500">
+                      {(training.trainingPlan.size / 1024).toFixed(1)} KB •
+                      {new Date(training.trainingPlan.uploadedAt).toLocaleDateString()}
+                    </p>
+                  </div>
+                  <a
+                    href={training.trainingPlan.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+                  >
+                    <Download className="w-4 h-4" />
+                    {t('common.download')}
+                  </a>
+                </div>
+              </div>
+            ) : (
+              <div className="text-center py-12 text-gray-500">
+                <FileText className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+                <p>{t('trainings.noPlan')}</p>
+                {!isReadOnly && (
+                  <p className="text-sm mt-2">{t('trainings.uploadPlanHint')}</p>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Attendance Tab */}
         {activeTab === 'attendance' && (
           <div className="space-y-3">

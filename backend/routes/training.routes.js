@@ -9,11 +9,12 @@ import {
   updateAttendance,
   uploadTrainingPhotos,
   uploadTrainingVideo,
+  uploadTrainingPlan,
   getTrainingStats
 } from '../controllers/training.controller.js';
 import { protect } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
-import { uploadPhotos, uploadVideo, handleUploadError } from '../middleware/upload.js';
+import { uploadPhotos, uploadVideo, uploadDocument, handleUploadError } from '../middleware/upload.js';
 
 const router = express.Router();
 
@@ -51,5 +52,6 @@ router.route('/:id')
 router.put('/:id/attendance', updateAttendance);
 router.post('/:id/photos', uploadPhotos, handleUploadError, uploadTrainingPhotos);
 router.post('/:id/video', uploadVideo, handleUploadError, uploadTrainingVideo);
+router.post('/:id/plan', uploadDocument, handleUploadError, uploadTrainingPlan);
 
 export default router;
