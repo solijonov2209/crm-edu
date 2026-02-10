@@ -532,12 +532,10 @@ const MatchDetailModal = ({ match, onClose, t, isReadOnly = false }) => {
                           </div>
                         )}
 
-                        {/* Assist Indicator (football boot icon) */}
+                        {/* Assist Indicator (boot icon) */}
                         {assists > 0 && (
                           <div className="absolute -top-1 left-5 min-w-[18px] h-[18px] bg-white rounded-full shadow flex items-center justify-center px-0.5">
-                            <svg className="w-3 h-3 text-gray-800" viewBox="0 0 512 512" fill="currentColor">
-                              <path d="M507.6 185.3c-8.6-43.1-47.5-73.3-91.4-73.3h-82.1L310 65.7c-5.7-10.9-17-17.7-29.4-17.7H115.1c-18.2 0-33 14.8-33 33v48H48c-26.5 0-48 21.5-48 48v80c0 26.5 21.5 48 48 48h18.2L48 387.8c-2.2 11.2 1.5 22.8 9.8 30.8 8.3 8 19.8 11.2 30.8 8.6l62.7-14.2c22.1-5 42.7-15.1 60.2-29.4l36.7-30c5.9 11.8 18.1 19.9 32.1 19.9h136c18.2 0 33-14.8 33-33v-50.5c31-18.3 52.4-51 55.1-88.9l3.2-47.8zM416.3 160c17.6 0 33.1 12.1 36.5 29.3L437 272h-52.7c-18.2 0-33 14.8-33 33v35.5h-88V213c0-9.1-7.4-16.5-16.5-16.5H115.1V160h301.2z"/>
-                            </svg>
+                            <span className="text-xs">👟</span>
                             {assists > 1 && <span className="text-[10px] font-bold text-gray-700">{assists}</span>}
                           </div>
                         )}
@@ -630,12 +628,7 @@ const MatchDetailModal = ({ match, onClose, t, isReadOnly = false }) => {
                             )}
                             {/* Assist indicator */}
                             {assists > 0 && (
-                              <span className="flex items-center text-sm text-gray-700">
-                                <svg className="w-4 h-4" viewBox="0 0 512 512" fill="currentColor">
-                                  <path d="M507.6 185.3c-8.6-43.1-47.5-73.3-91.4-73.3h-82.1L310 65.7c-5.7-10.9-17-17.7-29.4-17.7H115.1c-18.2 0-33 14.8-33 33v48H48c-26.5 0-48 21.5-48 48v80c0 26.5 21.5 48 48 48h18.2L48 387.8c-2.2 11.2 1.5 22.8 9.8 30.8 8.3 8 19.8 11.2 30.8 8.6l62.7-14.2c22.1-5 42.7-15.1 60.2-29.4l36.7-30c5.9 11.8 18.1 19.9 32.1 19.9h136c18.2 0 33-14.8 33-33v-50.5c31-18.3 52.4-51 55.1-88.9l3.2-47.8zM416.3 160c17.6 0 33.1 12.1 36.5 29.3L437 272h-52.7c-18.2 0-33 14.8-33 33v35.5h-88V213c0-9.1-7.4-16.5-16.5-16.5H115.1V160h301.2z"/>
-                                </svg>
-                                {assists > 1 && <span className="text-xs ml-0.5">{assists}</span>}
-                              </span>
+                              <span className="text-sm">👟{assists > 1 && <span className="text-xs">{assists}</span>}</span>
                             )}
                             {/* Card indicator */}
                             {card && (
