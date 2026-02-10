@@ -3,6 +3,25 @@ import Player from '../models/Player.js';
 import Team from '../models/Team.js';
 import { getFileUrl } from '../middleware/upload.js';
 
+// Helper function to check if coach has access to a team
+const coachHasTeamAccess = (user, teamId) => {
+  if (user.role !== 'coach') return true;
+
+  const teamIdStr = teamId?._id?.toString() || teamId?.toString();
+
+  // Check teams array first
+  if (user.teams && user.teams.length > 0) {
+    return user.teams.some(t => (t._id?.toString() || t.toString()) === teamIdStr);
+  }
+
+  // Fallback to single team
+  if (user.team) {
+    return (user.team._id?.toString() || user.team.toString()) === teamIdStr;
+  }
+
+  return false;
+};
+
 // @desc    Get all matches
 // @route   GET /api/matches
 // @access  Private
