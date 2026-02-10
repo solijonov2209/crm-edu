@@ -38,6 +38,8 @@ const Sidebar = ({ isOpen, onClose }) => {
     { to: '/coach/trainings', icon: Calendar, label: t('nav.trainings') },
     { to: '/coach/matches', icon: Trophy, label: t('nav.matches') },
     { to: '/coach/tactics', icon: Compass, label: t('nav.tactics') },
+    { to: '/coach/statistics', icon: BarChart3, label: t('nav.statistics') },
+    { to: '/coach/calendar', icon: CalendarDays, label: t('nav.calendar') },
   ];
 
   const links = isAdmin ? adminLinks : coachLinks;
