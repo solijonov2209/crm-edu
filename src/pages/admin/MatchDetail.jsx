@@ -24,7 +24,7 @@ const MatchDetail = () => {
   const { data: match, isLoading } = useQuery({
     queryKey: ['match', id],
     queryFn: () => matchesAPI.getById(id),
-    select: (res) => res.data,
+    select: (res) => res.data.match,
     enabled: !!id,
   });
 

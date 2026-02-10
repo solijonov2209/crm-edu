@@ -2,6 +2,25 @@ import Training from '../models/Training.js';
 import Player from '../models/Player.js';
 import { getFileUrl } from '../middleware/upload.js';
 
+// Helper function to check if coach has access to a team
+const coachHasTeamAccess = (user, teamId) => {
+  if (user.role !== 'coach') return true;
+
+  const teamIdStr = teamId?.toString() || teamId;
+
+  // Check teams array first
+  if (user.teams && user.teams.length > 0) {
+    return user.teams.some(t => (t._id?.toString() || t.toString()) === teamIdStr);
+  }
+
+  // Fallback to single team
+  if (user.team) {
+    return (user.team._id?.toString() || user.team.toString()) === teamIdStr;
+  }
+
+  return false;
+};
+
 // @desc    Get all trainings
 // @route   GET /api/trainings
 // @access  Private
@@ -19,9 +38,17 @@ export const getTrainings = async (req, res) => {
 
     const query = {};
 
-    // For coaches, only show their team's trainings
-    if (req.user.role === 'coach' && req.user.team) {
-      query.team = req.user.team._id;
+    // For coaches, filter by their teams
+    if (req.user.role === 'coach') {
+      const coachTeamIds = req.user.teams?.length > 0
+        ? req.user.teams.map(t => t._id || t)
+        : (req.user.team ? [req.user.team._id || req.user.team] : []);
+
+      if (team && coachTeamIds.some(id => id.toString() === team)) {
+        query.team = team;
+      } else if (coachTeamIds.length > 0) {
+        query.team = { $in: coachTeamIds };
+      }
     } else if (team) {
       query.team = team;
     }
@@ -78,8 +105,7 @@ export const getTraining = async (req, res) => {
     }
 
     // Check authorization for coaches
-    if (req.user.role === 'coach' &&
-        (!req.user.team || req.user.team._id.toString() !== training.team._id.toString())) {
+    if (!coachHasTeamAccess(req.user, training.team._id)) {
       return res.status(403).json({
         success: false,
         message: 'Not authorized to view this training'
