@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
@@ -934,6 +935,7 @@ const TrainingDetailModal = ({ training, onClose, t, isReadOnly = false }) => {
 
 const Trainings = () => {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const { user, isAdmin, isCoach } = useAuth();
   const queryClient = useQueryClient();
   const [selectedTeam, setSelectedTeam] = useState('');
@@ -942,7 +944,7 @@ const Trainings = () => {
   const [showModal, setShowModal] = useState(false);
   const [editingTraining, setEditingTraining] = useState(null);
   const [deletingTraining, setDeletingTraining] = useState(null);
-  const [viewingTrainingId, setViewingTrainingId] = useState(null);
+  const basePath = isAdmin ? '/admin' : '/coach';
 
   // Generate year options (last 3 years to next year)
   const yearOptions = (() => {
@@ -1023,11 +1025,6 @@ const Trainings = () => {
     }),
     select: (res) => res.data,
   });
-
-  // Get fresh training data from query (auto-updates when query is invalidated)
-  const viewingTraining = viewingTrainingId
-    ? trainingsData?.trainings?.find(t => t._id === viewingTrainingId)
-    : null;
 
   const { data: teamsData } = useQuery({
     queryKey: ['teams'],
@@ -1189,7 +1186,7 @@ const Trainings = () => {
             <Card
               key={training._id}
               className="p-4 hover:shadow-md transition-shadow cursor-pointer"
-              onClick={() => setViewingTrainingId(training._id)}
+              onClick={() => navigate(`${basePath}/trainings/${training._id}`)}
             >
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div className="flex items-start gap-4">
@@ -1224,7 +1221,7 @@ const Trainings = () => {
 
                   <div className="flex gap-1">
                     <button
-                      onClick={() => setViewingTrainingId(training._id)}
+                      onClick={() => navigate(`${basePath}/trainings/${training._id}`)}
                       className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg"
                     >
                       <Eye className="w-4 h-4" />
@@ -1268,21 +1265,6 @@ const Trainings = () => {
             setEditingTraining(null);
           }}
           loading={createMutation.isPending || updateMutation.isPending}
-        />
-      </Modal>
-
-      {/* Training Detail Modal */}
-      <Modal
-        isOpen={!!viewingTrainingId && !!viewingTraining}
-        onClose={() => setViewingTrainingId(null)}
-        title={isAdmin ? t('trainings.viewTraining') : t('trainings.trainingDetails')}
-        size="xlarge"
-      >
-        <TrainingDetailModal
-          training={viewingTraining}
-          onClose={() => setViewingTrainingId(null)}
-          t={t}
-          isReadOnly={isAdmin}
         />
       </Modal>
 
