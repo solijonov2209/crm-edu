@@ -28,6 +28,10 @@ const teamSchema = new mongoose.Schema({
     ref: 'User',
     default: null
   },
+  coaches: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  }],
   description: {
     type: String,
     trim: true,
