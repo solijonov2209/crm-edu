@@ -81,18 +81,97 @@ export const getPlayer = async (req, res) => {
       });
     }
 
-    // Check authorization for coaches
-    if (req.user.role === 'coach' &&
-        (!req.user.team || req.user.team._id.toString() !== player.team._id.toString())) {
-      return res.status(403).json({
-        success: false,
-        message: 'Not authorized to view this player'
-      });
+    // Check authorization for coaches (support multiple teams)
+    if (req.user.role === 'coach') {
+      const coachTeamIds = req.user.teams?.length > 0
+        ? req.user.teams.map(t => (t._id || t).toString())
+        : (req.user.team ? [(req.user.team._id || req.user.team).toString()] : []);
+
+      if (!coachTeamIds.includes(player.team._id.toString())) {
+        return res.status(403).json({
+          success: false,
+          message: 'Not authorized to view this player'
+        });
+      }
     }
+
+    // Calculate real statistics from completed matches
+    const playerId = player._id.toString();
+    const matches = await Match.find({
+      team: player.team._id,
+      status: 'completed'
+    });
+
+    let matchesPlayed = 0;
+    let goals = 0;
+    let assists = 0;
+    let yellowCards = 0;
+    let redCards = 0;
+    let totalRating = 0;
+    let ratedMatches = 0;
+
+    matches.forEach(match => {
+      // Check if player was in starting lineup (non-substitute)
+      const wasStarter = match.lineup?.some(l =>
+        !l.isSubstitute && ((l.player?._id?.toString() || l.player?.toString()) === playerId)
+      );
+      // Check if player came on as substitute
+      const cameAsSubstitute = match.substitutions?.some(s =>
+        (s.playerIn?._id?.toString() || s.playerIn?.toString()) === playerId
+      );
+
+      if (wasStarter || cameAsSubstitute) {
+        matchesPlayed++;
+      }
+
+      // Count goals
+      match.goals?.forEach(g => {
+        if ((g.player?._id?.toString() || g.player?.toString()) === playerId) {
+          goals++;
+        }
+        if ((g.assist?._id?.toString() || g.assist?.toString()) === playerId) {
+          assists++;
+        }
+      });
+
+      // Count cards
+      match.cards?.forEach(c => {
+        if ((c.player?._id?.toString() || c.player?.toString()) === playerId) {
+          if (c.type === 'yellow') yellowCards++;
+          if (c.type === 'red' || c.type === 'second_yellow') redCards++;
+        }
+      });
+
+      // Average rating
+      const playerRating = match.playerRatings?.find(r =>
+        (r.player?._id?.toString() || r.player?.toString()) === playerId
+      );
+      if (playerRating && playerRating.rating > 0) {
+        totalRating += playerRating.rating;
+        ratedMatches++;
+      }
+    });
+
+    // Update player statistics with computed values
+    const computedStats = {
+      matchesPlayed,
+      goals,
+      assists,
+      yellowCards,
+      redCards,
+      averageRating: ratedMatches > 0 ? (totalRating / ratedMatches).toFixed(1) : null
+    };
+
+    // Merge stored and computed statistics (computed takes priority)
+    const playerObj = player.toObject();
+    playerObj.statistics = {
+      ...playerObj.statistics,
+      ...computedStats
+    };
 
     res.status(200).json({
       success: true,
-      player
+      player: playerObj
     });
   } catch (error) {
     console.error('Get player error:', error);
@@ -388,8 +467,18 @@ export const getPlayerStatistics = async (req, res) => {
 
     // Build player query
     const playerQuery = { isActive: true };
-    if (req.user.role === 'coach' && req.user.team) {
-      playerQuery.team = req.user.team._id;
+
+    // For coaches, filter by their teams
+    if (req.user.role === 'coach') {
+      const coachTeamIds = req.user.teams?.length > 0
+        ? req.user.teams.map(t => t._id || t)
+        : (req.user.team ? [req.user.team._id || req.user.team] : []);
+
+      if (team && coachTeamIds.some(id => id.toString() === team)) {
+        playerQuery.team = team;
+      } else if (coachTeamIds.length > 0) {
+        playerQuery.team = { $in: coachTeamIds };
+      }
     } else if (team) {
       playerQuery.team = team;
     }
