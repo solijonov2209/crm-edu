@@ -121,6 +121,7 @@ const MatchDetailModal = ({ match, onClose, t, isReadOnly = false }) => {
   });
   const [coachNotes, setCoachNotes] = useState(match?.coachNotes || '');
   const [manOfTheMatch, setManOfTheMatch] = useState(match?.manOfTheMatch?._id || '');
+  const [formation, setFormation] = useState(match?.formation || '4-3-3');
   const [playerRatings, setPlayerRatings] = useState(() => {
     // Initialize from existing ratings or empty object
     const ratings = {};
@@ -204,6 +205,7 @@ const MatchDetailModal = ({ match, onClose, t, isReadOnly = false }) => {
         coachNotes,
         manOfTheMatch: manOfTheMatch || undefined,
         playerRatings: ratingsArray,
+        formation,
         status: 'completed'
       });
       onClose();
@@ -396,7 +398,7 @@ const MatchDetailModal = ({ match, onClose, t, isReadOnly = false }) => {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <span className="font-bold text-gray-900">{match.team?.name}</span>
-                <Badge variant="primary">{match.formation || '4-3-3'}</Badge>
+                <Badge variant="primary">{formation}</Badge>
               </div>
             </div>
 
@@ -447,7 +449,7 @@ const MatchDetailModal = ({ match, onClose, t, isReadOnly = false }) => {
                   ],
                 };
 
-                const positions = formationPositions[match.formation] || formationPositions['4-3-3'];
+                const positions = formationPositions[formation] || formationPositions['4-3-3'];
 
                 // Get starting lineup from match.lineup or use team players
                 const startingPlayers = match.lineup?.filter(l => !l.isSubstitute) || [];
@@ -711,6 +713,25 @@ const MatchDetailModal = ({ match, onClose, t, isReadOnly = false }) => {
                 </div>
               </div>
             )}
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                {t('matches.formation')}
+              </label>
+              {isReadOnly ? (
+                <p className="text-gray-900">{formation}</p>
+              ) : (
+                <select
+                  value={formation}
+                  onChange={(e) => setFormation(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                >
+                  {formations.map(f => (
+                    <option key={f.value} value={f.value}>{f.label}</option>
+                  ))}
+                </select>
+              )}
+            </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
