@@ -1,11 +1,46 @@
 import { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
-import { Menu, Bell, Globe, Calendar, Trophy, Clock } from 'lucide-react';
+import { Menu, Bell, Calendar, Trophy, Clock } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { trainingsAPI, matchesAPI } from '../../utils/api';
 import { formatDate } from '../../utils/helpers';
 import { Modal, Badge } from '../common';
+
+// Flag components
+const FlagUZ = () => (
+  <svg className="w-5 h-4 rounded-sm" viewBox="0 0 640 480">
+    <path fill="#1eb53a" d="M0 320h640v160H0z"/>
+    <path fill="#0099b5" d="M0 0h640v160H0z"/>
+    <path fill="#ce1126" d="M0 153.6h640v172.8H0z"/>
+    <path fill="#fff" d="M0 163.2h640v153.6H0z"/>
+    <circle fill="#fff" cx="134" cy="80" r="40"/>
+    <circle fill="#0099b5" cx="148" cy="80" r="32"/>
+    <g fill="#fff" transform="translate(196 80)">
+      {[...Array(12)].map((_, i) => (
+        <circle key={i} r="6" cx={Math.cos(i * 30 * Math.PI / 180) * 48} cy={Math.sin(i * 30 * Math.PI / 180) * 48 - 48}/>
+      ))}
+    </g>
+  </svg>
+);
+
+const FlagRU = () => (
+  <svg className="w-5 h-4 rounded-sm" viewBox="0 0 640 480">
+    <path fill="#fff" d="M0 0h640v160H0z"/>
+    <path fill="#0039a6" d="M0 160h640v160H0z"/>
+    <path fill="#d52b1e" d="M0 320h640v160H0z"/>
+  </svg>
+);
+
+const FlagGB = () => (
+  <svg className="w-5 h-4 rounded-sm" viewBox="0 0 640 480">
+    <path fill="#012169" d="M0 0h640v480H0z"/>
+    <path fill="#FFF" d="m75 0 244 181L562 0h78v62L400 241l240 178v61h-80L320 301 81 480H0v-60l239-178L0 64V0h75z"/>
+    <path fill="#C8102E" d="m424 281 216 159v40L369 281h55zm-184 20 6 35L54 480H0l240-179zM640 0v3L391 191l2-44L590 0h50zM0 0l239 176h-60L0 42V0z"/>
+    <path fill="#FFF" d="M241 0v480h160V0H241zM0 160v160h640V160H0z"/>
+    <path fill="#C8102E" d="M0 193v96h640v-96H0zM273 0v480h96V0h-96z"/>
+  </svg>
+);
 
 const Header = ({ onMenuClick }) => {
   const { t, i18n } = useTranslation();
@@ -14,9 +49,9 @@ const Header = ({ onMenuClick }) => {
   const [notifOpen, setNotifOpen] = useState(false);
 
   const languages = [
-    { code: 'uz', name: "O'zbek", flag: '🇺🇿' },
-    { code: 'ru', name: 'Русский', flag: '🇷🇺' },
-    { code: 'en', name: 'English', flag: '🇬🇧' },
+    { code: 'uz', name: "O'zbek", Flag: FlagUZ },
+    { code: 'ru', name: 'Русский', Flag: FlagRU },
+    { code: 'en', name: 'English', Flag: FlagGB },
   ];
 
   const currentLang = languages.find(l => l.code === i18n.language) || languages[0];
@@ -145,9 +180,8 @@ const Header = ({ onMenuClick }) => {
               onClick={() => setLangMenuOpen(!langMenuOpen)}
               className="flex items-center gap-2 px-3 py-2 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg"
             >
-              <Globe className="w-4 h-4" />
-              <span className="hidden sm:inline">{currentLang.flag} {currentLang.name}</span>
-              <span className="sm:hidden">{currentLang.flag}</span>
+              <currentLang.Flag />
+              <span className="hidden sm:inline">{currentLang.name}</span>
             </button>
 
             {langMenuOpen && (
@@ -165,7 +199,7 @@ const Header = ({ onMenuClick }) => {
                         i18n.language === lang.code ? 'text-primary-600 bg-primary-50' : 'text-gray-700'
                       }`}
                     >
-                      <span>{lang.flag}</span>
+                      <lang.Flag />
                       <span>{lang.name}</span>
                     </button>
                   ))}
