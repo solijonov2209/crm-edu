@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
@@ -1219,14 +1218,13 @@ const MatchDetailModal = ({ match, onClose, t, isReadOnly = false }) => {
 
 const Matches = () => {
   const { t } = useTranslation();
-  const navigate = useNavigate();
   const { user, isAdmin, isCoach } = useAuth();
   const queryClient = useQueryClient();
   const [selectedTeam, setSelectedTeam] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [editingMatch, setEditingMatch] = useState(null);
   const [deletingMatch, setDeletingMatch] = useState(null);
-  const basePath = isAdmin ? '/admin' : '/coach';
+  const [viewingMatchId, setViewingMatchId] = useState(null);
 
   // Reset selectedTeam when user changes (coach vs admin)
   // Support multiple teams for coaches
@@ -1250,6 +1248,11 @@ const Matches = () => {
     }),
     select: (res) => res.data,
   });
+
+  // Get fresh match data from query (auto-updates when query is invalidated)
+  const viewingMatch = viewingMatchId
+    ? matchesData?.matches?.find(m => m._id === viewingMatchId)
+    : null;
 
   const { data: teamsData } = useQuery({
     queryKey: ['teams'],
@@ -1375,7 +1378,7 @@ const Matches = () => {
             <Card
               key={match._id}
               className="overflow-hidden hover:shadow-md transition-shadow cursor-pointer"
-              onClick={() => navigate(`${basePath}/matches/${match._id}`)}
+              onClick={() => setViewingMatchId(match._id)}
             >
               <div className="flex flex-col md:flex-row">
                 {/* Match Info */}
@@ -1429,7 +1432,7 @@ const Matches = () => {
                 {/* Actions */}
                 <div className="flex md:flex-col items-center justify-center gap-2 p-4 bg-gray-50 border-t md:border-t-0 md:border-l border-gray-100" onClick={(e) => e.stopPropagation()}>
                   <button
-                    onClick={() => navigate(`${basePath}/matches/${match._id}`)}
+                    onClick={() => setViewingMatchId(match._id)}
                     className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg"
                   >
                     <Eye className="w-5 h-5" />
@@ -1472,6 +1475,21 @@ const Matches = () => {
             setEditingMatch(null);
           }}
           loading={createMutation.isPending || updateMutation.isPending}
+        />
+      </Modal>
+
+      {/* Match Detail Modal */}
+      <Modal
+        isOpen={!!viewingMatchId && !!viewingMatch}
+        onClose={() => setViewingMatchId(null)}
+        title={t('matches.matchDetails')}
+        size="xlarge"
+      >
+        <MatchDetailModal
+          match={viewingMatch}
+          onClose={() => setViewingMatchId(null)}
+          t={t}
+          isReadOnly={isAdmin}
         />
       </Modal>
 

@@ -13,9 +13,7 @@ import {
   Players as AdminPlayers,
   Coaches,
   Trainings as AdminTrainings,
-  TrainingDetail,
   Matches as AdminMatches,
-  MatchDetail,
   Tactics as AdminTactics,
   Statistics,
   Calendar,
@@ -109,9 +107,7 @@ function App() {
         <Route path="players" element={<AdminPlayers />} />
         <Route path="coaches" element={<Coaches />} />
         <Route path="trainings" element={<AdminTrainings />} />
-        <Route path="trainings/:id" element={<TrainingDetail />} />
         <Route path="matches" element={<AdminMatches />} />
-        <Route path="matches/:id" element={<MatchDetail />} />
         <Route path="tactics" element={<AdminTactics />} />
         <Route path="statistics" element={<Statistics />} />
         <Route path="calendar" element={<Calendar />} />
@@ -131,9 +127,7 @@ function App() {
         <Route path="dashboard" element={<CoachDashboard />} />
         <Route path="players" element={<CoachPlayers />} />
         <Route path="trainings" element={<CoachTrainings />} />
-        <Route path="trainings/:id" element={<TrainingDetail />} />
         <Route path="matches" element={<CoachMatches />} />
-        <Route path="matches/:id" element={<MatchDetail />} />
         <Route path="tactics" element={<CoachTactics />} />
         <Route path="statistics" element={<Statistics />} />
         <Route path="calendar" element={<Calendar />} />
