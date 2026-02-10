@@ -3,6 +3,51 @@ import Team from '../models/Team.js';
 import Match from '../models/Match.js';
 import { getFileUrl } from '../middleware/upload.js';
 
+// Helper function to compute player statistics from matches
+const computePlayerStats = (playerId, matches) => {
+  const playerIdStr = playerId.toString();
+  let matchesPlayed = 0;
+  let goals = 0;
+  let assists = 0;
+  let yellowCards = 0;
+  let redCards = 0;
+
+  matches.forEach(match => {
+    // Check if player was in starting lineup (non-substitute)
+    const wasStarter = match.lineup?.some(l =>
+      !l.isSubstitute && ((l.player?._id?.toString() || l.player?.toString()) === playerIdStr)
+    );
+    // Check if player came on as substitute
+    const cameAsSubstitute = match.substitutions?.some(s =>
+      (s.playerIn?._id?.toString() || s.playerIn?.toString()) === playerIdStr
+    );
+
+    if (wasStarter || cameAsSubstitute) {
+      matchesPlayed++;
+    }
+
+    // Count goals
+    match.goals?.forEach(g => {
+      if ((g.player?._id?.toString() || g.player?.toString()) === playerIdStr) {
+        goals++;
+      }
+      if ((g.assist?._id?.toString() || g.assist?.toString()) === playerIdStr) {
+        assists++;
+      }
+    });
+
+    // Count cards
+    match.cards?.forEach(c => {
+      if ((c.player?._id?.toString() || c.player?.toString()) === playerIdStr) {
+        if (c.type === 'yellow') yellowCards++;
+        if (c.type === 'red' || c.type === 'second_yellow') redCards++;
+      }
+    });
+  });
+
+  return { matchesPlayed, goals, assists, yellowCards, redCards };
+};
+
 // @desc    Get all players
 // @route   GET /api/players
 // @access  Private
@@ -22,9 +67,17 @@ export const getPlayers = async (req, res) => {
 
     const query = {};
 
-    // For coaches, only show their team's players
-    if (req.user.role === 'coach' && req.user.team) {
-      query.team = req.user.team._id;
+    // For coaches, show their teams' players
+    if (req.user.role === 'coach') {
+      const coachTeamIds = req.user.teams?.length > 0
+        ? req.user.teams.map(t => t._id || t)
+        : (req.user.team ? [req.user.team._id || req.user.team] : []);
+
+      if (team && coachTeamIds.some(id => id.toString() === team)) {
+        query.team = team;
+      } else if (coachTeamIds.length > 0) {
+        query.team = { $in: coachTeamIds };
+      }
     } else if (team) {
       query.team = team;
     }
@@ -49,13 +102,37 @@ export const getPlayers = async (req, res) => {
       .skip((page - 1) * limit)
       .limit(parseInt(limit));
 
+    // Get completed matches for statistics calculation
+    const teamIds = [...new Set(players.map(p => p.team?._id?.toString() || p.team?.toString()).filter(Boolean))];
+    const completedMatches = await Match.find({
+      team: { $in: teamIds },
+      status: 'completed'
+    });
+
+    // Compute real statistics for each player
+    const playersWithStats = players.map(player => {
+      const playerObj = player.toObject();
+      const teamMatches = completedMatches.filter(m =>
+        (m.team?._id?.toString() || m.team?.toString()) === (player.team?._id?.toString() || player.team?.toString())
+      );
+      const computedStats = computePlayerStats(player._id, teamMatches);
+
+      // Override stored statistics with computed values
+      playerObj.statistics = {
+        ...playerObj.statistics,
+        ...computedStats
+      };
+
+      return playerObj;
+    });
+
     res.status(200).json({
       success: true,
       count: players.length,
       total,
       totalPages: Math.ceil(total / limit),
       currentPage: parseInt(page),
-      players
+      players: playersWithStats
     });
   } catch (error) {
     console.error('Get players error:', error);

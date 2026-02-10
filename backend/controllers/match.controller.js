@@ -221,7 +221,7 @@ export const updateMatch = async (req, res) => {
         await team.save();
       }
 
-      // Update player statistics - starting players
+      // Update player matchesPlayed - starting players
       const playersUpdated = new Set();
 
       for (const lineupPlayer of (match.lineup || [])) {
@@ -236,7 +236,7 @@ export const updateMatch = async (req, res) => {
         }
       }
 
-      // Update player statistics - substitutes who played
+      // Update player matchesPlayed - substitutes who played
       for (const sub of (match.substitutions || [])) {
         if (sub.playerIn) {
           const playerId = sub.playerIn._id || sub.playerIn;
@@ -249,32 +249,8 @@ export const updateMatch = async (req, res) => {
         }
       }
 
-      // Update goals for players
-      for (const goal of (match.goals || [])) {
-        if (goal.player) {
-          const playerId = goal.player._id || goal.player;
-          await Player.findByIdAndUpdate(playerId, {
-            $inc: { 'statistics.goals': 1 }
-          });
-        }
-        if (goal.assist) {
-          const assistId = goal.assist._id || goal.assist;
-          await Player.findByIdAndUpdate(assistId, {
-            $inc: { 'statistics.assists': 1 }
-          });
-        }
-      }
-
-      // Update cards for players
-      for (const card of (match.cards || [])) {
-        if (card.player) {
-          const playerId = card.player._id || card.player;
-          const cardField = card.type === 'yellow' ? 'statistics.yellowCards' : 'statistics.redCards';
-          await Player.findByIdAndUpdate(playerId, {
-            $inc: { [cardField]: 1 }
-          });
-        }
-      }
+      // Note: Goals, assists, and cards are already updated when they are added
+      // via addGoal, addCard endpoints - no need to update again here
     }
 
     res.status(200).json({
