@@ -54,6 +54,8 @@
     "trainings": "Mashg'ulotlar",
     "matches": "O'yinlar",
     "tactics": "Taktika",
+    "statistics": "Statistika",
+    "calendar": "Kalendar",
     "coaches": "Murabbiylar",
     "settings": "Sozlamalar",
     "profile": "Profil",
@@ -369,5 +371,23 @@
     "october": "Oktyabr",
     "november": "Noyabr",
     "december": "Dekabr"
+  },
+  "statistics": {
+    "title": "Statistika",
+    "description": "O'yinchilarning o'yin statistikasi",
+    "topScorers": "Eng ko'p gol urganlar",
+    "topAssisters": "Eng ko'p assist berganlar",
+    "topRated": "Eng yuqori baholangan",
+    "averageRating": "O'rtacha baho",
+    "avgRating": "O'rtacha",
+    "allPlayers": "Barcha o'yinchilar statistikasi"
+  },
+  "calendar": {
+    "title": "Kalendar",
+    "description": "Mashg'ulotlar va o'yinlar jadvali",
+    "today": "Bugun",
+    "more": "ta ko'proq",
+    "upcomingTrainings": "Kelgusi mashg'ulotlar",
+    "upcomingMatches": "Kelgusi o'yinlar"
   }
 }

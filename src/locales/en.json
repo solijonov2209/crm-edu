@@ -54,6 +54,8 @@
     "trainings": "Trainings",
     "matches": "Matches",
     "tactics": "Tactics",
+    "statistics": "Statistics",
+    "calendar": "Calendar",
     "coaches": "Coaches",
     "settings": "Settings",
     "profile": "Profile",
@@ -369,5 +371,23 @@
     "october": "October",
     "november": "November",
     "december": "December"
+  },
+  "statistics": {
+    "title": "Statistics",
+    "description": "Player match statistics",
+    "topScorers": "Top Scorers",
+    "topAssisters": "Top Assisters",
+    "topRated": "Top Rated",
+    "averageRating": "Average Rating",
+    "avgRating": "Avg Rating",
+    "allPlayers": "All Players Statistics"
+  },
+  "calendar": {
+    "title": "Calendar",
+    "description": "Training and match schedule",
+    "today": "Today",
+    "more": "more",
+    "upcomingTrainings": "Upcoming Trainings",
+    "upcomingMatches": "Upcoming Matches"
   }
 }

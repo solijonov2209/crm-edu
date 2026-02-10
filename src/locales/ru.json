@@ -54,6 +54,8 @@
     "trainings": "Тренировки",
     "matches": "Матчи",
     "tactics": "Тактика",
+    "statistics": "Статистика",
+    "calendar": "Календарь",
     "coaches": "Тренеры",
     "settings": "Настройки",
     "profile": "Профиль",
@@ -369,5 +371,23 @@
     "october": "Октябрь",
     "november": "Ноябрь",
     "december": "Декабрь"
+  },
+  "statistics": {
+    "title": "Статистика",
+    "description": "Статистика игроков в матчах",
+    "topScorers": "Лучшие бомбардиры",
+    "topAssisters": "Лучшие ассистенты",
+    "topRated": "Лучшие по рейтингу",
+    "averageRating": "Средний рейтинг",
+    "avgRating": "Средний",
+    "allPlayers": "Статистика всех игроков"
+  },
+  "calendar": {
+    "title": "Календарь",
+    "description": "Расписание тренировок и матчей",
+    "today": "Сегодня",
+    "more": "ещё",
+    "upcomingTrainings": "Предстоящие тренировки",
+    "upcomingMatches": "Предстоящие матчи"
   }
 }
