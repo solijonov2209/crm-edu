@@ -4,6 +4,43 @@ import User from '../models/User.js';
 import Match from '../models/Match.js';
 import { getFileUrl } from '../middleware/upload.js';
 
+// Helper function to compute team statistics from matches
+const computeTeamStats = (teamId, matches) => {
+  const teamIdStr = teamId.toString();
+  let totalMatches = 0;
+  let wins = 0;
+  let draws = 0;
+  let losses = 0;
+  let goalsFor = 0;
+  let goalsAgainst = 0;
+
+  matches.forEach(match => {
+    if ((match.team?._id?.toString() || match.team?.toString()) === teamIdStr) {
+      totalMatches++;
+      const ourScore = match.isHome ? (match.score?.home || 0) : (match.score?.away || 0);
+      const theirScore = match.isHome ? (match.score?.away || 0) : (match.score?.home || 0);
+
+      goalsFor += ourScore;
+      goalsAgainst += theirScore;
+
+      if (ourScore > theirScore) wins++;
+      else if (ourScore < theirScore) losses++;
+      else draws++;
+    }
+  });
+
+  return {
+    totalMatches,
+    wins,
+    draws,
+    losses,
+    goalsFor,
+    goalsAgainst,
+    goalDifference: goalsFor - goalsAgainst,
+    points: (wins * 3) + draws
+  };
+};
+
 // @desc    Get all teams
 // @route   GET /api/teams
 // @access  Private
@@ -40,13 +77,23 @@ export const getTeams = async (req, res) => {
       .skip((page - 1) * limit)
       .limit(parseInt(limit));
 
-    // Get player counts for each team
-    const teamsWithCounts = await Promise.all(
+    // Get all completed matches for statistics calculation
+    const teamIds = teams.map(t => t._id);
+    const completedMatches = await Match.find({
+      team: { $in: teamIds },
+      status: 'completed'
+    });
+
+    // Get player counts and compute statistics for each team
+    const teamsWithStats = await Promise.all(
       teams.map(async (team) => {
         const playerCount = await Player.countDocuments({ team: team._id, isActive: true });
+        const computedStats = computeTeamStats(team._id, completedMatches);
+
         return {
           ...team.toObject(),
-          playerCount
+          playerCount,
+          statistics: computedStats
         };
       })
     );
@@ -57,7 +104,7 @@ export const getTeams = async (req, res) => {
       total,
       totalPages: Math.ceil(total / limit),
       currentPage: parseInt(page),
-      teams: teamsWithCounts
+      teams: teamsWithStats
     });
   } catch (error) {
     console.error('Get teams error:', error);
