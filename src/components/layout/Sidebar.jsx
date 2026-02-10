@@ -6,8 +6,10 @@ import {
   Users,
   UserCircle,
   Calendar,
+  CalendarDays,
   Trophy,
   Compass,
+  BarChart3,
   Settings,
   LogOut,
   X,
@@ -26,6 +28,8 @@ const Sidebar = ({ isOpen, onClose }) => {
     { to: '/admin/trainings', icon: Calendar, label: t('nav.trainings') },
     { to: '/admin/matches', icon: Trophy, label: t('nav.matches') },
     { to: '/admin/tactics', icon: Compass, label: t('nav.tactics') },
+    { to: '/admin/statistics', icon: BarChart3, label: t('nav.statistics') },
+    { to: '/admin/calendar', icon: CalendarDays, label: t('nav.calendar') },
   ];
 
   const coachLinks = [

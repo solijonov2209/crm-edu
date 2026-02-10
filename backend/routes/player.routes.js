@@ -10,7 +10,8 @@ import {
   updatePlayerRatings,
   updatePlayerStatistics,
   updatePlayerInjury,
-  getPlayersByTeam
+  getPlayersByTeam,
+  getPlayerStatistics
 } from '../controllers/player.controller.js';
 import { protect } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
@@ -37,6 +38,7 @@ router.route('/')
   );
 
 router.get('/team/:teamId', getPlayersByTeam);
+router.get('/statistics', getPlayerStatistics);
 
 router.route('/:id')
   .get(getPlayer)

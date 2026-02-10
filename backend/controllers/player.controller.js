@@ -1,5 +1,6 @@
 import Player from '../models/Player.js';
 import Team from '../models/Team.js';
+import Match from '../models/Match.js';
 import { getFileUrl } from '../middleware/upload.js';
 
 // @desc    Get all players
@@ -371,6 +372,132 @@ export const getPlayersByTeam = async (req, res) => {
     });
   } catch (error) {
     console.error('Get players by team error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error'
+    });
+  }
+};
+
+// @desc    Get player statistics from matches
+// @route   GET /api/players/statistics
+// @access  Private
+export const getPlayerStatistics = async (req, res) => {
+  try {
+    const { team } = req.query;
+
+    // Build player query
+    const playerQuery = { isActive: true };
+    if (req.user.role === 'coach' && req.user.team) {
+      playerQuery.team = req.user.team._id;
+    } else if (team) {
+      playerQuery.team = team;
+    }
+
+    // Get all players
+    const players = await Player.find(playerQuery)
+      .populate('team', 'name ageCategory')
+      .sort({ lastName: 1 });
+
+    // Get all completed matches
+    const matchQuery = { status: 'completed' };
+    if (playerQuery.team) {
+      matchQuery.team = playerQuery.team;
+    }
+
+    const matches = await Match.find(matchQuery);
+
+    // Calculate statistics for each player
+    const playerStats = players.map(player => {
+      const playerId = player._id.toString();
+
+      let matchesPlayed = 0;
+      let goals = 0;
+      let assists = 0;
+      let yellowCards = 0;
+      let redCards = 0;
+      let totalRating = 0;
+      let ratedMatches = 0;
+
+      matches.forEach(match => {
+        // Check if player was in lineup or substitutes
+        const wasInLineup = match.lineup?.some(l =>
+          (l.player?._id?.toString() || l.player?.toString()) === playerId
+        );
+        const cameAsSubstitute = match.substitutions?.some(s =>
+          (s.playerIn?._id?.toString() || s.playerIn?.toString()) === playerId
+        );
+
+        if (wasInLineup || cameAsSubstitute) {
+          matchesPlayed++;
+        }
+
+        // Count goals
+        match.goals?.forEach(g => {
+          if ((g.player?._id?.toString() || g.player?.toString()) === playerId) {
+            goals++;
+          }
+          if ((g.assist?._id?.toString() || g.assist?.toString()) === playerId) {
+            assists++;
+          }
+        });
+
+        // Count cards
+        match.cards?.forEach(c => {
+          if ((c.player?._id?.toString() || c.player?.toString()) === playerId) {
+            if (c.type === 'yellow' || c.type === 'second_yellow') {
+              yellowCards++;
+            }
+            if (c.type === 'red' || c.type === 'second_yellow') {
+              redCards++;
+            }
+          }
+        });
+
+        // Average rating
+        const playerRating = match.playerRatings?.find(r =>
+          (r.player?._id?.toString() || r.player?.toString()) === playerId
+        );
+        if (playerRating && playerRating.rating > 0) {
+          totalRating += playerRating.rating;
+          ratedMatches++;
+        }
+      });
+
+      return {
+        _id: player._id,
+        firstName: player.firstName,
+        lastName: player.lastName,
+        jerseyNumber: player.jerseyNumber,
+        position: player.position,
+        photo: player.photo,
+        team: player.team,
+        matchStats: {
+          matchesPlayed,
+          goals,
+          assists,
+          yellowCards,
+          redCards,
+          averageRating: ratedMatches > 0 ? (totalRating / ratedMatches).toFixed(1) : null
+        }
+      };
+    });
+
+    // Sort by goals then assists
+    playerStats.sort((a, b) => {
+      if (b.matchStats.goals !== a.matchStats.goals) {
+        return b.matchStats.goals - a.matchStats.goals;
+      }
+      return b.matchStats.assists - a.matchStats.assists;
+    });
+
+    res.status(200).json({
+      success: true,
+      count: playerStats.length,
+      players: playerStats
+    });
+  } catch (error) {
+    console.error('Get player statistics error:', error);
     res.status(500).json({
       success: false,
       message: 'Server error'

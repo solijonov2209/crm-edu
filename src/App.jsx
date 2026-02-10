@@ -15,6 +15,8 @@ import {
   Trainings as AdminTrainings,
   Matches as AdminMatches,
   Tactics as AdminTactics,
+  Statistics as AdminStatistics,
+  Calendar as AdminCalendar,
   Settings as AdminSettings,
 } from './pages/admin';
 
@@ -107,6 +109,8 @@ function App() {
         <Route path="trainings" element={<AdminTrainings />} />
         <Route path="matches" element={<AdminMatches />} />
         <Route path="tactics" element={<AdminTactics />} />
+        <Route path="statistics" element={<AdminStatistics />} />
+        <Route path="calendar" element={<AdminCalendar />} />
         <Route path="settings" element={<AdminSettings />} />
       </Route>
 

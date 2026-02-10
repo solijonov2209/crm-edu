@@ -75,6 +75,7 @@ export const playersAPI = {
   getAll: (params) => api.get('/players', { params }),
   getById: (id) => api.get(`/players/${id}`),
   getByTeam: (teamId) => api.get(`/players/team/${teamId}`),
+  getStatistics: (params) => api.get('/players/statistics', { params }),
   create: (data) => api.post('/players', data),
   update: (id, data) => api.put(`/players/${id}`, data),
   delete: (id) => api.delete(`/players/${id}`),
