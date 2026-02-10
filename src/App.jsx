@@ -15,8 +15,8 @@ import {
   Trainings as AdminTrainings,
   Matches as AdminMatches,
   Tactics as AdminTactics,
-  Statistics as AdminStatistics,
-  Calendar as AdminCalendar,
+  Statistics,
+  Calendar,
   Settings as AdminSettings,
 } from './pages/admin';
 
@@ -109,8 +109,8 @@ function App() {
         <Route path="trainings" element={<AdminTrainings />} />
         <Route path="matches" element={<AdminMatches />} />
         <Route path="tactics" element={<AdminTactics />} />
-        <Route path="statistics" element={<AdminStatistics />} />
-        <Route path="calendar" element={<AdminCalendar />} />
+        <Route path="statistics" element={<Statistics />} />
+        <Route path="calendar" element={<Calendar />} />
         <Route path="settings" element={<AdminSettings />} />
       </Route>
 
@@ -129,6 +129,8 @@ function App() {
         <Route path="trainings" element={<CoachTrainings />} />
         <Route path="matches" element={<CoachMatches />} />
         <Route path="tactics" element={<CoachTactics />} />
+        <Route path="statistics" element={<Statistics />} />
+        <Route path="calendar" element={<Calendar />} />
         <Route path="settings" element={<CoachSettings />} />
       </Route>
 
