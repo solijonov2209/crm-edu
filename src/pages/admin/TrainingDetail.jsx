@@ -38,7 +38,7 @@ const TrainingDetail = () => {
   const { data: training, isLoading } = useQuery({
     queryKey: ['training', id],
     queryFn: () => trainingsAPI.getById(id),
-    select: (res) => res.data,
+    select: (res) => res.data.training,
     enabled: !!id,
   });
 
