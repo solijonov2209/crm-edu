@@ -121,6 +121,15 @@ const MatchDetailModal = ({ match, onClose, t, isReadOnly = false }) => {
   });
   const [coachNotes, setCoachNotes] = useState(match?.coachNotes || '');
   const [manOfTheMatch, setManOfTheMatch] = useState(match?.manOfTheMatch?._id || '');
+  const [playerRatings, setPlayerRatings] = useState(() => {
+    // Initialize from existing ratings or empty object
+    const ratings = {};
+    match?.playerRatings?.forEach(r => {
+      const playerId = r.player?._id || r.player;
+      if (playerId) ratings[playerId] = r.rating;
+    });
+    return ratings;
+  });
 
   // For adding new items
   const [showGoalForm, setShowGoalForm] = useState(false);
@@ -184,11 +193,17 @@ const MatchDetailModal = ({ match, onClose, t, isReadOnly = false }) => {
   const handleSaveMatch = async () => {
     setSaving(true);
     try {
+      // Convert playerRatings object to array format
+      const ratingsArray = Object.entries(playerRatings)
+        .filter(([_, rating]) => rating > 0)
+        .map(([playerId, rating]) => ({ player: playerId, rating }));
+
       await updateMatchMutation.mutateAsync({
         score,
         statistics,
         coachNotes,
         manOfTheMatch: manOfTheMatch || undefined,
+        playerRatings: ratingsArray,
         status: 'completed'
       });
       onClose();
@@ -309,6 +324,7 @@ const MatchDetailModal = ({ match, onClose, t, isReadOnly = false }) => {
     { id: 'goals', label: t('matches.goals'), icon: Target },
     { id: 'cards', label: t('matches.cards'), icon: CreditCard },
     { id: 'substitutions', label: t('matches.substitutions'), icon: ArrowLeftRight },
+    { id: 'ratings', label: t('matches.ratings'), icon: Star },
     { id: 'statistics', label: t('matches.statistics'), icon: BarChart3 },
   ];
 
@@ -1052,6 +1068,74 @@ const MatchDetailModal = ({ match, onClose, t, isReadOnly = false }) => {
                   {t('matches.noSubstitutions')}
                 </div>
               )}
+            </div>
+          </div>
+        )}
+
+        {/* Ratings Tab */}
+        {activeTab === 'ratings' && (
+          <div className="space-y-4">
+            <div className="text-sm text-gray-500 mb-4">
+              {t('matches.ratingsDescription')}
+            </div>
+            <div className="space-y-3">
+              {playersData?.map((player) => {
+                const currentRating = playerRatings[player._id] || 0;
+                return (
+                  <div key={player._id} className="flex items-center gap-4 p-3 bg-gray-50 rounded-lg">
+                    <div className="w-10 h-10 rounded-full bg-gray-200 overflow-hidden flex-shrink-0">
+                      {player.photo ? (
+                        <img src={player.photo} alt="" className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-gray-500 font-bold">
+                          {player.jerseyNumber}
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-gray-900 truncate">
+                        {player.jerseyNumber}. {player.firstName} {player.lastName}
+                      </p>
+                      <p className="text-sm text-gray-500">{player.position}</p>
+                    </div>
+                    {isReadOnly ? (
+                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-white font-bold ${
+                        currentRating >= 8 ? 'bg-green-500' :
+                        currentRating >= 7 ? 'bg-green-400' :
+                        currentRating >= 6 ? 'bg-yellow-500' :
+                        currentRating >= 5 ? 'bg-orange-500' :
+                        currentRating > 0 ? 'bg-red-500' : 'bg-gray-300'
+                      }`}>
+                        {currentRating > 0 ? currentRating : '-'}
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="range"
+                          min="0"
+                          max="10"
+                          step="0.5"
+                          value={currentRating}
+                          onChange={(e) => setPlayerRatings({
+                            ...playerRatings,
+                            [player._id]: parseFloat(e.target.value)
+                          })}
+                          className="w-24 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                        />
+                        <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-white font-bold text-sm ${
+                          currentRating >= 8 ? 'bg-green-500' :
+                          currentRating >= 7 ? 'bg-green-400' :
+                          currentRating >= 6 ? 'bg-yellow-500' :
+                          currentRating >= 5 ? 'bg-orange-500' :
+                          currentRating > 0 ? 'bg-red-500' : 'bg-gray-300'
+                        }`}>
+                          {currentRating > 0 ? currentRating : '-'}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}

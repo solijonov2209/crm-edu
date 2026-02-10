@@ -51,7 +51,9 @@ export const getUsers = async (req, res) => {
 // @access  Private/Admin
 export const getUser = async (req, res) => {
   try {
-    const user = await User.findById(req.params.id).populate('team');
+    const user = await User.findById(req.params.id)
+      .populate('team', 'name ageCategory')
+      .populate('teams', 'name ageCategory');
 
     if (!user) {
       return res.status(404).json({
@@ -215,7 +217,13 @@ export const deleteUser = async (req, res) => {
       });
     }
 
-    // Remove from team if assigned
+    // Remove from all assigned teams' coaches array
+    if (user.teams?.length > 0) {
+      for (const teamId of user.teams) {
+        await Team.findByIdAndUpdate(teamId, { $pull: { coaches: user._id } });
+      }
+    }
+    // Also clear legacy single team coach field if this user was the coach
     if (user.team) {
       await Team.findByIdAndUpdate(user.team, { coach: null });
     }

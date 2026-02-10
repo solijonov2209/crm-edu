@@ -311,7 +311,9 @@
       "performance": "Результативность"
     },
     "startingXI": "Стартовый состав",
-    "benchPlayers": "Запасные игроки"
+    "benchPlayers": "Запасные игроки",
+    "ratings": "Рейтинги",
+    "ratingsDescription": "Оцените игроков от 1 до 10. 0 = не оценено."
   },
   "tactics": {
     "title": "Тактический редактор",
