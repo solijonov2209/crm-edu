@@ -157,13 +157,15 @@ export const updateMatch = async (req, res) => {
     }
 
     // Check authorization for coaches
-    if (req.user.role === 'coach' &&
-        (!req.user.team || req.user.team._id.toString() !== match.team.toString())) {
+    if (!coachHasTeamAccess(req.user, match.team)) {
       return res.status(403).json({
         success: false,
         message: 'Not authorized to update this match'
       });
     }
+
+    const wasCompleted = match.status === 'completed';
+    const willBeCompleted = req.body.status === 'completed';
 
     match = await Match.findByIdAndUpdate(
       req.params.id,
@@ -172,7 +174,89 @@ export const updateMatch = async (req, res) => {
     )
       .populate('team', 'name ageCategory primaryColor logo')
       .populate('lineup.player', 'firstName lastName jerseyNumber position photo')
-      .populate('substitutes', 'firstName lastName jerseyNumber position photo');
+      .populate('substitutes', 'firstName lastName jerseyNumber position photo')
+      .populate('substitutions.playerIn', 'firstName lastName jerseyNumber')
+      .populate('substitutions.playerOut', 'firstName lastName jerseyNumber');
+
+    // If match is being completed for the first time, update statistics
+    if (!wasCompleted && willBeCompleted) {
+      // Update team statistics
+      const team = await Team.findById(match.team._id || match.team);
+      if (team) {
+        const ourScore = match.isHome ? (match.score?.home || 0) : (match.score?.away || 0);
+        const theirScore = match.isHome ? (match.score?.away || 0) : (match.score?.home || 0);
+
+        team.statistics = team.statistics || { totalMatches: 0, wins: 0, draws: 0, losses: 0, goalsFor: 0, goalsAgainst: 0 };
+        team.statistics.totalMatches += 1;
+        team.statistics.goalsFor += ourScore;
+        team.statistics.goalsAgainst += theirScore;
+
+        if (ourScore > theirScore) {
+          team.statistics.wins += 1;
+        } else if (ourScore < theirScore) {
+          team.statistics.losses += 1;
+        } else {
+          team.statistics.draws += 1;
+        }
+
+        await team.save();
+      }
+
+      // Update player statistics - starting players
+      const playersUpdated = new Set();
+
+      for (const lineupPlayer of (match.lineup || [])) {
+        if (!lineupPlayer.isSubstitute && lineupPlayer.player) {
+          const playerId = lineupPlayer.player._id || lineupPlayer.player;
+          if (!playersUpdated.has(playerId.toString())) {
+            await Player.findByIdAndUpdate(playerId, {
+              $inc: { 'statistics.matchesPlayed': 1 }
+            });
+            playersUpdated.add(playerId.toString());
+          }
+        }
+      }
+
+      // Update player statistics - substitutes who played
+      for (const sub of (match.substitutions || [])) {
+        if (sub.playerIn) {
+          const playerId = sub.playerIn._id || sub.playerIn;
+          if (!playersUpdated.has(playerId.toString())) {
+            await Player.findByIdAndUpdate(playerId, {
+              $inc: { 'statistics.matchesPlayed': 1 }
+            });
+            playersUpdated.add(playerId.toString());
+          }
+        }
+      }
+
+      // Update goals for players
+      for (const goal of (match.goals || [])) {
+        if (goal.player) {
+          const playerId = goal.player._id || goal.player;
+          await Player.findByIdAndUpdate(playerId, {
+            $inc: { 'statistics.goals': 1 }
+          });
+        }
+        if (goal.assist) {
+          const assistId = goal.assist._id || goal.assist;
+          await Player.findByIdAndUpdate(assistId, {
+            $inc: { 'statistics.assists': 1 }
+          });
+        }
+      }
+
+      // Update cards for players
+      for (const card of (match.cards || [])) {
+        if (card.player) {
+          const playerId = card.player._id || card.player;
+          const cardField = card.type === 'yellow' ? 'statistics.yellowCards' : 'statistics.redCards';
+          await Player.findByIdAndUpdate(playerId, {
+            $inc: { [cardField]: 1 }
+          });
+        }
+      }
+    }
 
     res.status(200).json({
       success: true,
@@ -395,6 +479,14 @@ export const completeMatch = async (req, res) => {
       });
     }
 
+    // Skip if already completed
+    if (match.status === 'completed') {
+      return res.status(400).json({
+        success: false,
+        message: 'Match is already completed'
+      });
+    }
+
     const {
       score,
       statistics,
@@ -416,29 +508,51 @@ export const completeMatch = async (req, res) => {
 
     // Update team statistics
     const team = await Team.findById(match.team);
-    const ourScore = match.isHome ? match.score.home : match.score.away;
-    const theirScore = match.isHome ? match.score.away : match.score.home;
+    if (team) {
+      const ourScore = match.isHome ? (match.score?.home || 0) : (match.score?.away || 0);
+      const theirScore = match.isHome ? (match.score?.away || 0) : (match.score?.home || 0);
 
-    team.statistics.totalMatches += 1;
-    team.statistics.goalsFor += ourScore;
-    team.statistics.goalsAgainst += theirScore;
+      team.statistics = team.statistics || { totalMatches: 0, wins: 0, draws: 0, losses: 0, goalsFor: 0, goalsAgainst: 0 };
+      team.statistics.totalMatches += 1;
+      team.statistics.goalsFor += ourScore;
+      team.statistics.goalsAgainst += theirScore;
 
-    if (ourScore > theirScore) {
-      team.statistics.wins += 1;
-    } else if (ourScore < theirScore) {
-      team.statistics.losses += 1;
-    } else {
-      team.statistics.draws += 1;
+      if (ourScore > theirScore) {
+        team.statistics.wins += 1;
+      } else if (ourScore < theirScore) {
+        team.statistics.losses += 1;
+      } else {
+        team.statistics.draws += 1;
+      }
+
+      await team.save();
     }
 
-    await team.save();
+    // Update player match statistics - starting players
+    const playersUpdated = new Set();
 
-    // Update player match statistics
-    for (const lineupPlayer of match.lineup) {
-      if (!lineupPlayer.isSubstitute) {
-        await Player.findByIdAndUpdate(lineupPlayer.player, {
-          $inc: { 'statistics.matchesPlayed': 1 }
-        });
+    for (const lineupPlayer of (match.lineup || [])) {
+      if (!lineupPlayer.isSubstitute && lineupPlayer.player) {
+        const playerId = lineupPlayer.player._id || lineupPlayer.player;
+        if (!playersUpdated.has(playerId.toString())) {
+          await Player.findByIdAndUpdate(playerId, {
+            $inc: { 'statistics.matchesPlayed': 1 }
+          });
+          playersUpdated.add(playerId.toString());
+        }
+      }
+    }
+
+    // Update player match statistics - substitutes who played
+    for (const sub of (match.substitutions || [])) {
+      if (sub.playerIn) {
+        const playerId = sub.playerIn._id || sub.playerIn;
+        if (!playersUpdated.has(playerId.toString())) {
+          await Player.findByIdAndUpdate(playerId, {
+            $inc: { 'statistics.matchesPlayed': 1 }
+          });
+          playersUpdated.add(playerId.toString());
+        }
       }
     }
 

@@ -1,6 +1,7 @@
 import Team from '../models/Team.js';
 import Player from '../models/Player.js';
 import User from '../models/User.js';
+import Match from '../models/Match.js';
 import { getFileUrl } from '../middleware/upload.js';
 
 // @desc    Get all teams
@@ -12,9 +13,15 @@ export const getTeams = async (req, res) => {
 
     const query = {};
 
-    // For coaches, only show their team
-    if (req.user.role === 'coach' && req.user.team) {
-      query._id = req.user.team._id;
+    // For coaches, show their teams
+    if (req.user.role === 'coach') {
+      const coachTeamIds = req.user.teams?.length > 0
+        ? req.user.teams.map(t => t._id || t)
+        : (req.user.team ? [req.user.team._id || req.user.team] : []);
+
+      if (coachTeamIds.length > 0) {
+        query._id = { $in: coachTeamIds };
+      }
     }
 
     if (isActive !== undefined) query.isActive = isActive === 'true';
@@ -77,23 +84,95 @@ export const getTeam = async (req, res) => {
       });
     }
 
-    // Check authorization for coaches
-    if (req.user.role === 'coach' &&
-        (!req.user.team || req.user.team._id.toString() !== team._id.toString())) {
-      return res.status(403).json({
-        success: false,
-        message: 'Not authorized to view this team'
-      });
+    // Check authorization for coaches (support multiple teams)
+    if (req.user.role === 'coach') {
+      const coachTeamIds = req.user.teams?.length > 0
+        ? req.user.teams.map(t => (t._id || t).toString())
+        : (req.user.team ? [(req.user.team._id || req.user.team).toString()] : []);
+
+      if (!coachTeamIds.includes(team._id.toString())) {
+        return res.status(403).json({
+          success: false,
+          message: 'Not authorized to view this team'
+        });
+      }
     }
 
     // Get player count
     const playerCount = await Player.countDocuments({ team: team._id, isActive: true });
 
+    // Calculate real statistics from completed matches
+    const completedMatches = await Match.find({
+      team: team._id,
+      status: 'completed'
+    }).sort({ matchDate: -1 });
+
+    let totalMatches = 0;
+    let wins = 0;
+    let draws = 0;
+    let losses = 0;
+    let goalsFor = 0;
+    let goalsAgainst = 0;
+
+    completedMatches.forEach(match => {
+      totalMatches++;
+      const ourScore = match.isHome ? (match.score?.home || 0) : (match.score?.away || 0);
+      const theirScore = match.isHome ? (match.score?.away || 0) : (match.score?.home || 0);
+
+      goalsFor += ourScore;
+      goalsAgainst += theirScore;
+
+      if (ourScore > theirScore) wins++;
+      else if (ourScore < theirScore) losses++;
+      else draws++;
+    });
+
+    // Get recent matches (last 5)
+    const recentMatches = completedMatches.slice(0, 5).map(match => ({
+      _id: match._id,
+      opponent: match.opponent,
+      matchDate: match.matchDate,
+      score: match.score,
+      isHome: match.isHome,
+      competition: match.competition,
+      result: (() => {
+        const ourScore = match.isHome ? (match.score?.home || 0) : (match.score?.away || 0);
+        const theirScore = match.isHome ? (match.score?.away || 0) : (match.score?.home || 0);
+        if (ourScore > theirScore) return 'W';
+        if (ourScore < theirScore) return 'L';
+        return 'D';
+      })()
+    }));
+
+    // Get upcoming matches
+    const upcomingMatches = await Match.find({
+      team: team._id,
+      status: { $in: ['scheduled', 'lineup_set'] },
+      matchDate: { $gte: new Date() }
+    })
+      .sort({ matchDate: 1 })
+      .limit(5)
+      .select('opponent matchDate kickoffTime venue isHome competition');
+
+    const computedStatistics = {
+      totalMatches,
+      wins,
+      draws,
+      losses,
+      goalsFor,
+      goalsAgainst,
+      goalDifference: goalsFor - goalsAgainst,
+      points: (wins * 3) + draws
+    };
+
     res.status(200).json({
       success: true,
       team: {
         ...team.toObject(),
-        playerCount
+        playerCount,
+        statistics: computedStatistics,
+        recentMatches,
+        upcomingMatches
       }
     });
   } catch (error) {
