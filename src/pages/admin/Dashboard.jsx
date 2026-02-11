@@ -148,6 +148,7 @@ const Dashboard = () => {
           label={t('dashboard.totalCoaches')}
           value={counts.totalCoaches}
           color="bg-blue-500"
+          subValue={`${counts.totalCoaches} ${t('dashboard.totalCoaches').toLowerCase()}`}
           to="/admin/coaches"
         />
         <StatCard
@@ -155,6 +156,7 @@ const Dashboard = () => {
           label={t('dashboard.injuredPlayers')}
           value={counts.injuredPlayers}
           color="bg-red-500"
+          subValue={`${counts.injuredPlayers} ${t('dashboard.injuredPlayers').toLowerCase()}`}
           to="/admin/players?isInjured=true"
         />
       </div>

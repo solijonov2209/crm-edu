@@ -1,7 +1,8 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
+import { useSearchParams } from 'react-router-dom';
 import { playersAPI, teamsAPI } from '../../utils/api';
 import { Card, Loading, Button, Input, Select, Modal, Avatar, Badge, EmptyState, ConfirmDialog } from '../../components/common';
 import { Plus, Search, Edit, Trash2, Eye, Users, Download, Camera, Upload, User, Phone, Calendar, Ruler, Scale, Star, Heart, HeartPulse } from 'lucide-react';
@@ -443,20 +444,29 @@ const PlayerDetailModal = ({ player, onClose, onMarkRecovered, onMarkInjured, re
 const Players = () => {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedTeam, setSelectedTeam] = useState('');
   const [selectedPosition, setSelectedPosition] = useState('');
+  const [showInjuredOnly, setShowInjuredOnly] = useState(searchParams.get('isInjured') === 'true');
   const [showModal, setShowModal] = useState(false);
   const [editingPlayer, setEditingPlayer] = useState(null);
   const [deletingPlayer, setDeletingPlayer] = useState(null);
   const [viewingPlayer, setViewingPlayer] = useState(null);
 
+  // Read isInjured from URL params
+  useEffect(() => {
+    const isInjuredParam = searchParams.get('isInjured');
+    setShowInjuredOnly(isInjuredParam === 'true');
+  }, [searchParams]);
+
   const { data: playersData, isLoading } = useQuery({
-    queryKey: ['players', searchTerm, selectedTeam, selectedPosition],
+    queryKey: ['players', searchTerm, selectedTeam, selectedPosition, showInjuredOnly],
     queryFn: () => playersAPI.getAll({
       search: searchTerm,
       team: selectedTeam,
       position: selectedPosition,
+      isInjured: showInjuredOnly ? 'true' : undefined,
       limit: 100
     }),
     select: (res) => res.data,
@@ -636,6 +646,25 @@ const Players = () => {
             onChange={(e) => setSelectedPosition(e.target.value)}
             className="w-full sm:w-40"
           />
+          <button
+            onClick={() => {
+              const newValue = !showInjuredOnly;
+              setShowInjuredOnly(newValue);
+              if (newValue) {
+                setSearchParams({ isInjured: 'true' });
+              } else {
+                setSearchParams({});
+              }
+            }}
+            className={`px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition-colors ${
+              showInjuredOnly
+                ? 'bg-red-100 text-red-700 border border-red-300'
+                : 'bg-gray-100 text-gray-600 border border-gray-300 hover:bg-gray-200'
+            }`}
+          >
+            <HeartPulse className="w-4 h-4" />
+            {t('players.injured')}
+          </button>
         </div>
       </Card>
 
