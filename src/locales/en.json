@@ -155,6 +155,12 @@
     "defending": "Defending",
     "physical": "Physical",
     "overallRating": "Overall Rating",
+    "markRecovered": "Mark as Recovered",
+    "markInjured": "Mark as Injured",
+    "injuryDetails": "Injury Details",
+    "injuryDetailsPlaceholder": "Describe the injury...",
+    "recoveredSuccess": "Player marked as recovered",
+    "injuredSuccess": "Player marked as injured",
     "positions": {
       "GK": "Goalkeeper",
       "CB": "Center Back",

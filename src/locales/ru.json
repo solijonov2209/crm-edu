@@ -155,6 +155,12 @@
     "defending": "Защита",
     "physical": "Физика",
     "overallRating": "Общий рейтинг",
+    "markRecovered": "Отметить выздоровевшим",
+    "markInjured": "Отметить травмированным",
+    "injuryDetails": "Описание травмы",
+    "injuryDetailsPlaceholder": "Опишите травму...",
+    "recoveredSuccess": "Игрок отмечен как выздоровевший",
+    "injuredSuccess": "Игрок отмечен как травмированный",
     "positions": {
       "GK": "Вратарь",
       "CB": "Центральный защитник",

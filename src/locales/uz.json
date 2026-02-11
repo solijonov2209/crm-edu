@@ -155,6 +155,12 @@
     "defending": "Himoya",
     "physical": "Jismoniy",
     "overallRating": "Umumiy reyting",
+    "markRecovered": "Tuzaldi deb belgilash",
+    "markInjured": "Jarohatli deb belgilash",
+    "injuryDetails": "Jarohat tafsilotlari",
+    "injuryDetailsPlaceholder": "Jarohat haqida yozing...",
+    "recoveredSuccess": "O'yinchi tuzaldi deb belgilandi",
+    "injuredSuccess": "O'yinchi jarohatli deb belgilandi",
     "positions": {
       "GK": "Darvozabon",
       "CB": "Markaziy himoyachi",
