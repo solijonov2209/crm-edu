@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
+import { Link } from 'react-router-dom';
 import { dashboardAPI } from '../../utils/api';
 import { useAuth } from '../../context/AuthContext';
 import { Card, Loading, Badge } from '../../components/common';
@@ -11,7 +12,10 @@ import {
   Trophy,
   Calendar,
   TrendingUp,
-  Target
+  Target,
+  ChevronRight,
+  Clock,
+  Activity
 } from 'lucide-react';
 import { formatDate, getFormBadge } from '../../utils/helpers';
 import {
@@ -40,20 +44,25 @@ ChartJS.register(
   LineElement
 );
 
-const StatCard = ({ icon: Icon, label, value, color, subValue }) => (
-  <Card className="p-6">
-    <div className="flex items-center gap-4">
-      <div className={`stat-icon ${color}`}>
-        <Icon className="w-6 h-6 text-white" />
+const StatCard = ({ icon: Icon, label, value, color, subValue, to }) => {
+  const content = (
+    <Card className={`p-6 ${to ? 'hover:shadow-md transition-shadow cursor-pointer' : ''}`}>
+      <div className="flex items-center gap-4">
+        <div className={`stat-icon ${color}`}>
+          <Icon className="w-6 h-6 text-white" />
+        </div>
+        <div className="flex-1">
+          <p className="text-2xl font-bold text-gray-900">{value}</p>
+          <p className="text-sm text-gray-500">{label}</p>
+          {subValue && <p className="text-xs text-gray-400 mt-1">{subValue}</p>}
+        </div>
+        {to && <ChevronRight className="w-5 h-5 text-gray-400" />}
       </div>
-      <div>
-        <p className="text-2xl font-bold text-gray-900">{value}</p>
-        <p className="text-sm text-gray-500">{label}</p>
-        {subValue && <p className="text-xs text-gray-400 mt-1">{subValue}</p>}
-      </div>
-    </div>
-  </Card>
-);
+    </Card>
+  );
+
+  return to ? <Link to={to}>{content}</Link> : content;
+};
 
 const Dashboard = () => {
   const { t } = useTranslation();
@@ -124,6 +133,7 @@ const Dashboard = () => {
           value={counts.totalTeams}
           color="bg-primary-500"
           subValue={`${counts.activeTeams} ${t('dashboard.activeTeams').toLowerCase()}`}
+          to="/admin/teams"
         />
         <StatCard
           icon={Users}
@@ -131,18 +141,21 @@ const Dashboard = () => {
           value={counts.totalPlayers}
           color="bg-green-500"
           subValue={`${counts.activePlayers} ${t('dashboard.activePlayers').toLowerCase()}`}
+          to="/admin/players"
         />
         <StatCard
           icon={UserCircle}
           label={t('dashboard.totalCoaches')}
           value={counts.totalCoaches}
           color="bg-blue-500"
+          to="/admin/coaches"
         />
         <StatCard
           icon={AlertTriangle}
           label={t('dashboard.injuredPlayers')}
           value={counts.injuredPlayers}
           color="bg-red-500"
+          to="/admin/players?isInjured=true"
         />
       </div>
 
@@ -150,8 +163,11 @@ const Dashboard = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Match Results Pie Chart */}
         <Card>
-          <Card.Header>
+          <Card.Header className="flex items-center justify-between">
             <h3 className="font-semibold text-gray-900">{t('dashboard.matchStats')}</h3>
+            <Link to="/admin/matches" className="text-sm text-primary-600 hover:text-primary-700 flex items-center gap-1">
+              {t('common.viewAll')} <ChevronRight className="w-4 h-4" />
+            </Link>
           </Card.Header>
           <Card.Body>
             <div className="h-48">
@@ -187,8 +203,11 @@ const Dashboard = () => {
 
         {/* Position Distribution */}
         <Card>
-          <Card.Header>
+          <Card.Header className="flex items-center justify-between">
             <h3 className="font-semibold text-gray-900">{t('players.position')}</h3>
+            <Link to="/admin/players" className="text-sm text-primary-600 hover:text-primary-700 flex items-center gap-1">
+              {t('common.viewAll')} <ChevronRight className="w-4 h-4" />
+            </Link>
           </Card.Header>
           <Card.Body>
             <div className="h-64">
@@ -211,8 +230,11 @@ const Dashboard = () => {
 
         {/* Training Trend */}
         <Card>
-          <Card.Header>
+          <Card.Header className="flex items-center justify-between">
             <h3 className="font-semibold text-gray-900">{t('dashboard.trainingStats')}</h3>
+            <Link to="/admin/trainings" className="text-sm text-primary-600 hover:text-primary-700 flex items-center gap-1">
+              {t('common.viewAll')} <ChevronRight className="w-4 h-4" />
+            </Link>
           </Card.Header>
           <Card.Body>
             <div className="h-64">
@@ -238,11 +260,14 @@ const Dashboard = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Upcoming Matches */}
         <Card>
-          <Card.Header>
+          <Card.Header className="flex items-center justify-between">
             <h3 className="font-semibold text-gray-900 flex items-center gap-2">
               <Calendar className="w-5 h-5 text-primary-500" />
               {t('dashboard.upcomingMatches')}
             </h3>
+            <Link to="/admin/matches" className="text-sm text-primary-600 hover:text-primary-700 flex items-center gap-1">
+              {t('common.viewAll')} <ChevronRight className="w-4 h-4" />
+            </Link>
           </Card.Header>
           <Card.Body className="p-0">
             {upcomingMatches.length === 0 ? (
@@ -250,7 +275,7 @@ const Dashboard = () => {
             ) : (
               <div className="divide-y divide-gray-100">
                 {upcomingMatches.map((match) => (
-                  <div key={match._id} className="p-4 hover:bg-gray-50">
+                  <Link key={match._id} to="/admin/matches" className="block p-4 hover:bg-gray-50 transition-colors">
                     <div className="flex justify-between items-start">
                       <div>
                         <p className="font-medium text-gray-900">
@@ -262,7 +287,7 @@ const Dashboard = () => {
                       </div>
                       <Badge variant="primary">{match.competition}</Badge>
                     </div>
-                  </div>
+                  </Link>
                 ))}
               </div>
             )}
@@ -271,11 +296,14 @@ const Dashboard = () => {
 
         {/* Recent Matches */}
         <Card>
-          <Card.Header>
+          <Card.Header className="flex items-center justify-between">
             <h3 className="font-semibold text-gray-900 flex items-center gap-2">
               <Trophy className="w-5 h-5 text-yellow-500" />
               {t('dashboard.recentMatches')}
             </h3>
+            <Link to="/admin/matches" className="text-sm text-primary-600 hover:text-primary-700 flex items-center gap-1">
+              {t('common.viewAll')} <ChevronRight className="w-4 h-4" />
+            </Link>
           </Card.Header>
           <Card.Body className="p-0">
             {recentMatches.length === 0 ? (
@@ -283,7 +311,7 @@ const Dashboard = () => {
             ) : (
               <div className="divide-y divide-gray-100">
                 {recentMatches.map((match) => (
-                  <div key={match._id} className="p-4 hover:bg-gray-50">
+                  <Link key={match._id} to="/admin/matches" className="block p-4 hover:bg-gray-50 transition-colors">
                     <div className="flex justify-between items-center">
                       <div>
                         <p className="font-medium text-gray-900">
@@ -302,7 +330,7 @@ const Dashboard = () => {
                         </p>
                       </div>
                     </div>
-                  </div>
+                  </Link>
                 ))}
               </div>
             )}
@@ -311,11 +339,14 @@ const Dashboard = () => {
 
         {/* Top Scorers */}
         <Card>
-          <Card.Header>
+          <Card.Header className="flex items-center justify-between">
             <h3 className="font-semibold text-gray-900 flex items-center gap-2">
               <Target className="w-5 h-5 text-green-500" />
               {t('dashboard.topScorers')}
             </h3>
+            <Link to="/admin/statistics" className="text-sm text-primary-600 hover:text-primary-700 flex items-center gap-1">
+              {t('common.viewAll')} <ChevronRight className="w-4 h-4" />
+            </Link>
           </Card.Header>
           <Card.Body className="p-0">
             {topScorers.length === 0 ? (
@@ -323,7 +354,7 @@ const Dashboard = () => {
             ) : (
               <div className="divide-y divide-gray-100">
                 {topScorers.slice(0, 5).map((player, index) => (
-                  <div key={player._id} className="p-4 hover:bg-gray-50 flex items-center gap-4">
+                  <Link key={player._id} to="/admin/players" className="p-4 hover:bg-gray-50 flex items-center gap-4 transition-colors">
                     <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
                       index === 0 ? 'bg-yellow-100 text-yellow-700' :
                       index === 1 ? 'bg-gray-100 text-gray-700' :
@@ -344,7 +375,7 @@ const Dashboard = () => {
                       </p>
                       <p className="text-xs text-gray-500">{t('players.goals')}</p>
                     </div>
-                  </div>
+                  </Link>
                 ))}
               </div>
             )}
