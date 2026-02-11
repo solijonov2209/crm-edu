@@ -33,7 +33,8 @@
     "success": "Muvaffaqiyatli",
     "error": "Xatolik",
     "warning": "Ogohlantirish",
-    "download": "Yuklab olish"
+    "download": "Yuklab olish",
+    "viewAll": "Barchasini ko'rish"
   },
   "auth": {
     "login": "Kirish",
@@ -83,7 +84,9 @@
     "winRate": "G'alaba foizi",
     "averageAttendance": "O'rtacha davomat",
     "topScorers": "Eng ko'p gol urganlar",
-    "recentForm": "So'nggi natijalar"
+    "recentForm": "So'nggi natijalar",
+    "topScorer": "Eng yaxshi to'purar",
+    "recentResults": "So'nggi natijalar"
   },
   "teams": {
     "title": "Jamoalar",

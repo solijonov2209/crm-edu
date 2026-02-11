@@ -33,7 +33,8 @@
     "success": "Success",
     "error": "Error",
     "warning": "Warning",
-    "download": "Download"
+    "download": "Download",
+    "viewAll": "View All"
   },
   "auth": {
     "login": "Login",
@@ -83,7 +84,9 @@
     "winRate": "Win Rate",
     "averageAttendance": "Average Attendance",
     "topScorers": "Top Scorers",
-    "recentForm": "Recent Form"
+    "recentForm": "Recent Form",
+    "topScorer": "Top Scorer",
+    "recentResults": "Recent Results"
   },
   "teams": {
     "title": "Teams",
