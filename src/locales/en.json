@@ -33,7 +33,8 @@
     "success": "Success",
     "error": "Error",
     "warning": "Warning",
-    "download": "Download"
+    "download": "Download",
+    "viewAll": "View All"
   },
   "auth": {
     "login": "Login",
@@ -83,7 +84,9 @@
     "winRate": "Win Rate",
     "averageAttendance": "Average Attendance",
     "topScorers": "Top Scorers",
-    "recentForm": "Recent Form"
+    "recentForm": "Recent Form",
+    "topScorer": "Top Scorer",
+    "recentResults": "Recent Results"
   },
   "teams": {
     "title": "Teams",
@@ -152,6 +155,12 @@
     "defending": "Defending",
     "physical": "Physical",
     "overallRating": "Overall Rating",
+    "markRecovered": "Mark as Recovered",
+    "markInjured": "Mark as Injured",
+    "injuryDetails": "Injury Details",
+    "injuryDetailsPlaceholder": "Describe the injury...",
+    "recoveredSuccess": "Player marked as recovered",
+    "injuredSuccess": "Player marked as injured",
     "positions": {
       "GK": "Goalkeeper",
       "CB": "Center Back",

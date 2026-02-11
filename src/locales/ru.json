@@ -33,7 +33,8 @@
     "success": "Успешно",
     "error": "Ошибка",
     "warning": "Предупреждение",
-    "download": "Скачать"
+    "download": "Скачать",
+    "viewAll": "Смотреть все"
   },
   "auth": {
     "login": "Войти",
@@ -83,7 +84,9 @@
     "winRate": "Процент побед",
     "averageAttendance": "Средняя посещаемость",
     "topScorers": "Лучшие бомбардиры",
-    "recentForm": "Последние результаты"
+    "recentForm": "Последние результаты",
+    "topScorer": "Лучший бомбардир",
+    "recentResults": "Последние результаты"
   },
   "teams": {
     "title": "Команды",
@@ -152,6 +155,12 @@
     "defending": "Защита",
     "physical": "Физика",
     "overallRating": "Общий рейтинг",
+    "markRecovered": "Отметить выздоровевшим",
+    "markInjured": "Отметить травмированным",
+    "injuryDetails": "Описание травмы",
+    "injuryDetailsPlaceholder": "Опишите травму...",
+    "recoveredSuccess": "Игрок отмечен как выздоровевший",
+    "injuredSuccess": "Игрок отмечен как травмированный",
     "positions": {
       "GK": "Вратарь",
       "CB": "Центральный защитник",

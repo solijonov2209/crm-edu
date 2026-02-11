@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { playersAPI, teamsAPI } from '../../utils/api';
 import { Card, Loading, Button, Input, Select, Modal, Avatar, Badge, EmptyState, ConfirmDialog } from '../../components/common';
-import { Plus, Search, Edit, Trash2, Eye, Users, Download, Camera, Upload, User, Phone, Calendar, Ruler, Scale, Star } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, Eye, Users, Download, Camera, Upload, User, Phone, Calendar, Ruler, Scale, Star, Heart, HeartPulse } from 'lucide-react';
 import { formatDate, getPositionColor, calculateAge, getOverallRating, positions } from '../../utils/helpers';
 import toast from 'react-hot-toast';
 
@@ -180,7 +180,11 @@ const PlayerForm = ({ player, teams, onSubmit, onClose, loading, onPhotoUpload }
   );
 };
 
-const PlayerDetailModal = ({ player, onClose, t }) => {
+const PlayerDetailModal = ({ player, onClose, onMarkRecovered, onMarkInjured, recoveryLoading, t }) => {
+  const [showInjuryForm, setShowInjuryForm] = useState(false);
+  const [injuryDetails, setInjuryDetails] = useState('');
+  const [injuryEndDate, setInjuryEndDate] = useState('');
+
   if (!player) return null;
 
   const ratingItems = [
@@ -191,6 +195,15 @@ const PlayerDetailModal = ({ player, onClose, t }) => {
     { key: 'defending', label: 'DEF', color: 'bg-purple-500' },
     { key: 'physical', label: 'PHY', color: 'bg-orange-500' },
   ];
+
+  const handleMarkInjured = () => {
+    if (injuryDetails.trim()) {
+      onMarkInjured(player._id, injuryDetails, injuryEndDate || null);
+      setShowInjuryForm(false);
+      setInjuryDetails('');
+      setInjuryEndDate('');
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -222,6 +235,11 @@ const PlayerDetailModal = ({ player, onClose, t }) => {
               {t(`players.positions.${player.position}`)}
             </span>
             <span className="text-sm text-gray-500">{player.team?.name}</span>
+            {player.isInjured && (
+              <span className="px-3 py-1 rounded-full text-sm font-medium bg-red-100 text-red-700">
+                {t('players.injured')}
+              </span>
+            )}
           </div>
         </div>
       </div>
@@ -334,14 +352,81 @@ const PlayerDetailModal = ({ player, onClose, t }) => {
       </div>
 
       {/* Injury Status */}
-      {player.isInjured && (
+      {player.isInjured ? (
         <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-          <h3 className="text-lg font-semibold text-red-800 mb-2">{t('players.injuryStatus')}</h3>
-          <p className="text-red-700">{player.injuryDetails?.description || t('players.injured')}</p>
-          {player.injuryDetails?.expectedReturn && (
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-lg font-semibold text-red-800">{t('players.injuryStatus')}</h3>
+            <Button
+              size="small"
+              variant="success"
+              icon={HeartPulse}
+              onClick={() => onMarkRecovered(player._id)}
+              loading={recoveryLoading}
+            >
+              {t('players.markRecovered')}
+            </Button>
+          </div>
+          <p className="text-red-700">{player.injuryDetails || t('players.injured')}</p>
+          {player.injuryEndDate && (
             <p className="text-sm text-red-600 mt-1">
-              {t('players.expectedReturn')}: {formatDate(player.injuryDetails.expectedReturn)}
+              {t('players.expectedReturn')}: {formatDate(player.injuryEndDate)}
             </p>
+          )}
+        </div>
+      ) : (
+        <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Heart className="w-5 h-5 text-green-600" />
+              <span className="text-green-700 font-medium">{t('players.available')}</span>
+            </div>
+            <Button
+              size="small"
+              variant="danger"
+              icon={HeartPulse}
+              onClick={() => setShowInjuryForm(true)}
+            >
+              {t('players.markInjured')}
+            </Button>
+          </div>
+
+          {showInjuryForm && (
+            <div className="mt-4 pt-4 border-t border-green-200 space-y-3">
+              <Input
+                label={t('players.injuryDetails')}
+                value={injuryDetails}
+                onChange={(e) => setInjuryDetails(e.target.value)}
+                placeholder={t('players.injuryDetailsPlaceholder')}
+              />
+              <Input
+                label={t('players.expectedReturn')}
+                type="date"
+                value={injuryEndDate}
+                onChange={(e) => setInjuryEndDate(e.target.value)}
+              />
+              <div className="flex gap-2">
+                <Button
+                  size="small"
+                  variant="danger"
+                  onClick={handleMarkInjured}
+                  loading={recoveryLoading}
+                  disabled={!injuryDetails.trim()}
+                >
+                  {t('common.confirm')}
+                </Button>
+                <Button
+                  size="small"
+                  variant="secondary"
+                  onClick={() => {
+                    setShowInjuryForm(false);
+                    setInjuryDetails('');
+                    setInjuryEndDate('');
+                  }}
+                >
+                  {t('common.cancel')}
+                </Button>
+              </div>
+            </div>
           )}
         </div>
       )}
@@ -425,6 +510,22 @@ const Players = () => {
     }
   });
 
+  const updateInjuryMutation = useMutation({
+    mutationFn: ({ id, data }) => playersAPI.updateInjury(id, data),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries(['players']);
+      if (!variables.data.isInjured) {
+        toast.success(t('players.recoveredSuccess'));
+      } else {
+        toast.success(t('players.injuredSuccess'));
+      }
+      setViewingPlayer(null);
+    },
+    onError: (error) => {
+      toast.error(error.response?.data?.message || t('common.error'));
+    }
+  });
+
   const handleSubmit = async (data, photoFile) => {
     try {
       let playerId;
@@ -458,6 +559,30 @@ const Players = () => {
       team: player.team?._id || player.team
     });
     setShowModal(true);
+  };
+
+  const handleMarkRecovered = (playerId) => {
+    updateInjuryMutation.mutate({
+      id: playerId,
+      data: {
+        isInjured: false,
+        injuryDetails: '',
+        injuryEndDate: null,
+        physicalCondition: 100
+      }
+    });
+  };
+
+  const handleMarkInjured = (playerId, injuryDetails, injuryEndDate) => {
+    updateInjuryMutation.mutate({
+      id: playerId,
+      data: {
+        isInjured: true,
+        injuryDetails,
+        injuryEndDate,
+        physicalCondition: 50
+      }
+    });
   };
 
   const positionOptions = [
@@ -576,9 +701,16 @@ const Players = () => {
                 </div>
 
                 <div className="flex items-center justify-between">
-                  <span className={`px-2 py-1 rounded text-xs font-medium text-white ${getPositionColor(player.position)}`}>
-                    {t(`players.positions.${player.position}`)}
-                  </span>
+                  <div className="flex items-center gap-1">
+                    <span className={`px-2 py-1 rounded text-xs font-medium text-white ${getPositionColor(player.position)}`}>
+                      {t(`players.positions.${player.position}`)}
+                    </span>
+                    {player.isInjured && (
+                      <span className="px-2 py-1 rounded text-xs font-medium bg-red-100 text-red-700">
+                        {t('players.injured')}
+                      </span>
+                    )}
+                  </div>
                   <span className="text-sm text-gray-500">
                     {player.age} {t('players.yearsOld')}
                   </span>
@@ -645,6 +777,9 @@ const Players = () => {
         <PlayerDetailModal
           player={viewingPlayer}
           onClose={() => setViewingPlayer(null)}
+          onMarkRecovered={handleMarkRecovered}
+          onMarkInjured={handleMarkInjured}
+          recoveryLoading={updateInjuryMutation.isPending}
           t={t}
         />
       </Modal>
