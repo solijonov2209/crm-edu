@@ -103,7 +103,7 @@ const TeamForm = ({ team, coaches, onSubmit, onClose, loading }) => {
 
 // Team Detail Modal with Trainings List
 const TeamDetailModal = ({ team, onClose, onViewTraining, t }) => {
-  const { isAdmin } = useAuth();
+  useAuth();
 
   // Fetch trainings for this team
   const { data: trainingsData, isLoading } = useQuery({

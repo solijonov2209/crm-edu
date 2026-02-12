@@ -1,7 +1,7 @@
 import Match from '../models/Match.js';
 import Player from '../models/Player.js';
 import Team from '../models/Team.js';
-import { getFileUrl } from '../middleware/upload.js';
+// getFileUrl import removed - not currently used
 
 // Helper function to check if coach has access to a team
 const coachHasTeamAccess = (user, teamId) => {

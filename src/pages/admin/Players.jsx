@@ -6,10 +6,10 @@ import { useSearchParams } from 'react-router-dom';
 import { playersAPI, teamsAPI } from '../../utils/api';
 import { Card, Loading, Button, Input, Select, Modal, Avatar, Badge, EmptyState, ConfirmDialog } from '../../components/common';
 import { Plus, Search, Edit, Trash2, Eye, Users, Download, Camera, Upload, User, Phone, Calendar, Ruler, Scale, Star, Heart, HeartPulse } from 'lucide-react';
-import { formatDate, getPositionColor, calculateAge, getOverallRating, positions } from '../../utils/helpers';
+import { formatDate, getPositionColor, positions } from '../../utils/helpers';
 import toast from 'react-hot-toast';
 
-const PlayerForm = ({ player, teams, onSubmit, onClose, loading, onPhotoUpload }) => {
+const PlayerForm = ({ player, teams, onSubmit, onClose, loading }) => {
   const { t } = useTranslation();
   const fileInputRef = useRef(null);
   const [photoPreview, setPhotoPreview] = useState(player?.photo || null);

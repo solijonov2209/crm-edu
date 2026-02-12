@@ -141,7 +141,7 @@ const MatchDetailModal = ({ match, onClose, t, isReadOnly = false }) => {
   const [newSub, setNewSub] = useState({ playerOut: '', playerIn: '', minute: '', reason: 'tactical' });
 
   // Fetch team players
-  const { data: playersData, isLoading: playersLoading } = useQuery({
+  const { data: playersData } = useQuery({
     queryKey: ['players', match?.team?._id],
     queryFn: () => playersAPI.getByTeam(match?.team?._id),
     enabled: !!match?.team?._id,
@@ -196,7 +196,7 @@ const MatchDetailModal = ({ match, onClose, t, isReadOnly = false }) => {
     try {
       // Convert playerRatings object to array format
       const ratingsArray = Object.entries(playerRatings)
-        .filter(([_, rating]) => rating > 0)
+        .filter(([, rating]) => rating > 0)
         .map(([playerId, rating]) => ({ player: playerId, rating }));
 
       await updateMatchMutation.mutateAsync({
