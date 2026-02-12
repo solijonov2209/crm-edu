@@ -154,7 +154,7 @@ export const exportPlayersPDF = async (req, res) => {
     doc.font('Helvetica');
     let y = startY + 25;
 
-    players.forEach((player, index) => {
+    players.forEach((player) => {
       if (y > 700) {
         doc.addPage();
         y = 50;

@@ -17,7 +17,7 @@ import {
   Clock,
   Activity
 } from 'lucide-react';
-import { formatDate, getFormBadge } from '../../utils/helpers';
+import { formatDate } from '../../utils/helpers';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -77,7 +77,7 @@ const Dashboard = () => {
   if (isLoading) return <Loading />;
   if (error) return <div className="text-red-500">Error loading dashboard</div>;
 
-  const { counts, matchStats, trainingStats, recentTrainings, upcomingMatches, recentMatches, topScorers, positionDistribution, monthlyTrainingData } = data;
+  const { counts, matchStats, upcomingMatches, recentMatches, topScorers, positionDistribution, monthlyTrainingData } = data;
 
   // Chart data for match results
   const matchResultsData = {
