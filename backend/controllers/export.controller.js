@@ -5,6 +5,14 @@ import Team from '../models/Team.js';
 import Training from '../models/Training.js';
 import Match from '../models/Match.js';
 
+// Helper function to get coach's team IDs
+const getCoachTeamIds = (user) => {
+  if (user.role !== 'coach') return null;
+  return user.teams?.length > 0
+    ? user.teams.map(t => (t._id || t).toString())
+    : (user.team ? [(user.team._id || user.team).toString()] : []);
+};
+
 // @desc    Export players to Excel
 // @route   GET /api/export/players/excel
 // @access  Private
@@ -13,8 +21,13 @@ export const exportPlayersExcel = async (req, res) => {
     const { team } = req.query;
     const query = { isActive: true };
 
-    if (req.user.role === 'coach' && req.user.team) {
-      query.team = req.user.team._id;
+    if (req.user.role === 'coach') {
+      const coachTeamIds = getCoachTeamIds(req.user);
+      if (team && coachTeamIds.includes(team)) {
+        query.team = team;
+      } else if (coachTeamIds.length > 0) {
+        query.team = { $in: coachTeamIds };
+      }
     } else if (team) {
       query.team = team;
     }
@@ -108,8 +121,13 @@ export const exportPlayersPDF = async (req, res) => {
     const { team } = req.query;
     const query = { isActive: true };
 
-    if (req.user.role === 'coach' && req.user.team) {
-      query.team = req.user.team._id;
+    if (req.user.role === 'coach') {
+      const coachTeamIds = getCoachTeamIds(req.user);
+      if (team && coachTeamIds.includes(team)) {
+        query.team = team;
+      } else if (coachTeamIds.length > 0) {
+        query.team = { $in: coachTeamIds };
+      }
     } else if (team) {
       query.team = team;
     }
@@ -193,8 +211,13 @@ export const exportTrainingsExcel = async (req, res) => {
     const { team, startDate, endDate } = req.query;
     const query = {};
 
-    if (req.user.role === 'coach' && req.user.team) {
-      query.team = req.user.team._id;
+    if (req.user.role === 'coach') {
+      const coachTeamIds = getCoachTeamIds(req.user);
+      if (team && coachTeamIds.includes(team)) {
+        query.team = team;
+      } else if (coachTeamIds.length > 0) {
+        query.team = { $in: coachTeamIds };
+      }
     } else if (team) {
       query.team = team;
     }

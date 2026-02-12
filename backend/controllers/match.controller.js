@@ -39,9 +39,17 @@ export const getMatches = async (req, res) => {
 
     const query = {};
 
-    // For coaches, only show their team's matches
-    if (req.user.role === 'coach' && req.user.team) {
-      query.team = req.user.team._id;
+    // For coaches, only show their teams' matches
+    if (req.user.role === 'coach') {
+      const coachTeamIds = req.user.teams?.length > 0
+        ? req.user.teams.map(t => t._id || t)
+        : (req.user.team ? [req.user.team._id || req.user.team] : []);
+
+      if (team && coachTeamIds.some(id => id.toString() === team)) {
+        query.team = team;
+      } else if (coachTeamIds.length > 0) {
+        query.team = { $in: coachTeamIds };
+      }
     } else if (team) {
       query.team = team;
     }
@@ -110,8 +118,7 @@ export const getMatch = async (req, res) => {
     }
 
     // Check authorization for coaches
-    if (req.user.role === 'coach' &&
-        (!req.user.team || req.user.team._id.toString() !== match.team._id.toString())) {
+    if (!coachHasTeamAccess(req.user, match.team)) {
       return res.status(403).json({
         success: false,
         message: 'Not authorized to view this match'
@@ -138,9 +145,23 @@ export const createMatch = async (req, res) => {
   try {
     const matchData = { ...req.body };
 
-    // For coaches, force team to be their team
-    if (req.user.role === 'coach' && req.user.team) {
-      matchData.team = req.user.team._id;
+    // For coaches, validate team access
+    if (req.user.role === 'coach') {
+      const coachTeamIds = req.user.teams?.length > 0
+        ? req.user.teams.map(t => (t._id || t).toString())
+        : (req.user.team ? [(req.user.team._id || req.user.team).toString()] : []);
+
+      // If team is specified, validate it's in coach's teams
+      if (matchData.team && !coachTeamIds.includes(matchData.team.toString())) {
+        return res.status(403).json({
+          success: false,
+          message: 'Not authorized to create match for this team'
+        });
+      }
+      // If no team specified, use first team
+      if (!matchData.team && coachTeamIds.length > 0) {
+        matchData.team = coachTeamIds[0];
+      }
     }
 
     const match = await Match.create(matchData);
@@ -281,8 +302,7 @@ export const deleteMatch = async (req, res) => {
     }
 
     // Check authorization for coaches
-    if (req.user.role === 'coach' &&
-        (!req.user.team || req.user.team._id.toString() !== match.team.toString())) {
+    if (!coachHasTeamAccess(req.user, match.team)) {
       return res.status(403).json({
         success: false,
         message: 'Not authorized to delete this match'
@@ -574,9 +594,15 @@ export const getUpcomingMatches = async (req, res) => {
       status: { $in: ['scheduled', 'lineup_set'] }
     };
 
-    // For coaches, only show their team's matches
-    if (req.user.role === 'coach' && req.user.team) {
-      query.team = req.user.team._id;
+    // For coaches, only show their teams' matches
+    if (req.user.role === 'coach') {
+      const coachTeamIds = req.user.teams?.length > 0
+        ? req.user.teams.map(t => t._id || t)
+        : (req.user.team ? [req.user.team._id || req.user.team] : []);
+
+      if (coachTeamIds.length > 0) {
+        query.team = { $in: coachTeamIds };
+      }
     }
 
     const matches = await Match.find(query)

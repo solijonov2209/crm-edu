@@ -19,7 +19,7 @@ export const protect = async (req, res, next) => {
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-    const user = await User.findById(decoded.id).populate('team');
+    const user = await User.findById(decoded.id).populate('team').populate('teams');
 
     if (!user) {
       return res.status(401).json({
@@ -68,9 +68,14 @@ export const authorizeTeam = async (req, res, next) => {
       return next();
     }
 
-    // Coach can only access their own team
+    // Coach can only access their own teams
     if (req.user.role === 'coach') {
-      if (!req.user.team || req.user.team._id.toString() !== teamId) {
+      // Get all team IDs coach is assigned to (support both teams array and single team)
+      const coachTeamIds = req.user.teams?.length > 0
+        ? req.user.teams.map(t => (t._id || t).toString())
+        : (req.user.team ? [(req.user.team._id || req.user.team).toString()] : []);
+
+      if (!coachTeamIds.includes(teamId)) {
         return res.status(403).json({
           success: false,
           message: 'You do not have permission to access this team'

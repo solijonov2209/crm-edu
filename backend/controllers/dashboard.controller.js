@@ -165,60 +165,68 @@ export const getAdminDashboard = async (req, res) => {
 // @access  Private
 export const getCoachDashboard = async (req, res) => {
   try {
-    if (!req.user.team) {
+    // Get all team IDs coach is assigned to (support both teams array and single team)
+    const coachTeamIds = req.user.teams?.length > 0
+      ? req.user.teams.map(t => t._id || t)
+      : (req.user.team ? [req.user.team._id || req.user.team] : []);
+
+    if (coachTeamIds.length === 0) {
       return res.status(400).json({
         success: false,
         message: 'You are not assigned to any team'
       });
     }
 
-    const teamId = req.user.team._id;
+    // Use the first team for main display (or selected team if query param provided)
+    const selectedTeamId = req.query.team && coachTeamIds.some(id => id.toString() === req.query.team)
+      ? req.query.team
+      : coachTeamIds[0];
 
     // Get team info
-    const team = await Team.findById(teamId)
+    const team = await Team.findById(selectedTeamId)
       .populate('coach', 'firstName lastName')
       .populate('assistantCoach', 'firstName lastName');
 
-    // Get player counts
+    // Get player counts for selected team only
     const [totalPlayers, injuredPlayers] = await Promise.all([
-      Player.countDocuments({ team: teamId, isActive: true }),
-      Player.countDocuments({ team: teamId, isInjured: true })
+      Player.countDocuments({ team: selectedTeamId, isActive: true }),
+      Player.countDocuments({ team: selectedTeamId, isInjured: true })
     ]);
 
-    // Get all players with basic info
-    const players = await Player.find({ team: teamId, isActive: true })
+    // Get all players with basic info for selected team only
+    const players = await Player.find({ team: selectedTeamId, isActive: true })
       .select('firstName lastName position jerseyNumber photo physicalCondition isInjured statistics ratings')
       .sort({ position: 1, lastName: 1 });
 
-    // Get recent trainings
-    const recentTrainings = await Training.find({ team: teamId })
+    // Get recent trainings for selected team only
+    const recentTrainings = await Training.find({ team: selectedTeamId })
       .populate('attendance.player', 'firstName lastName')
       .sort({ date: -1 })
       .limit(5);
 
-    // Get upcoming matches
+    // Get upcoming matches for selected team only
     const upcomingMatches = await Match.find({
-      team: teamId,
+      team: selectedTeamId,
       matchDate: { $gte: new Date() },
       status: { $in: ['scheduled', 'lineup_set'] }
     })
       .sort({ matchDate: 1 })
       .limit(5);
 
-    // Get recent match results
+    // Get recent match results for selected team only
     const recentMatches = await Match.find({
-      team: teamId,
+      team: selectedTeamId,
       status: 'completed'
     })
       .sort({ matchDate: -1 })
       .limit(5);
 
-    // Training statistics for last 30 days
+    // Training statistics for last 30 days for selected team only
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
     const trainingsLast30Days = await Training.find({
-      team: teamId,
+      team: selectedTeamId,
       date: { $gte: thirtyDaysAgo }
     });
 
@@ -234,18 +242,18 @@ export const getCoachDashboard = async (req, res) => {
       }
     });
 
-    // Get top performers (by goals)
+    // Get top performers (by goals) for selected team only
     const topScorers = await Player.find({
-      team: teamId,
+      team: selectedTeamId,
       'statistics.goals': { $gt: 0 }
     })
       .sort({ 'statistics.goals': -1 })
       .limit(5)
       .select('firstName lastName photo statistics.goals');
 
-    // Get recent form
+    // Get recent form for selected team only
     const completedMatches = await Match.find({
-      team: teamId,
+      team: selectedTeamId,
       status: 'completed'
     })
       .sort({ matchDate: -1 })
@@ -259,10 +267,15 @@ export const getCoachDashboard = async (req, res) => {
       return 'D';
     });
 
+    // Get list of all coach's teams for team switcher
+    const coachTeams = await Team.find({ _id: { $in: coachTeamIds } })
+      .select('name ageCategory birthYear primaryColor');
+
     res.status(200).json({
       success: true,
       data: {
         team,
+        coachTeams, // List of all teams coach has access to
         counts: {
           totalPlayers,
           injuredPlayers,
