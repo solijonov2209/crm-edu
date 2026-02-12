@@ -266,9 +266,23 @@ export const createPlayer = async (req, res) => {
   try {
     const playerData = { ...req.body };
 
-    // For coaches, force team to be their team
-    if (req.user.role === 'coach' && req.user.team) {
-      playerData.team = req.user.team._id;
+    // For coaches, validate team access
+    if (req.user.role === 'coach') {
+      const coachTeamIds = req.user.teams?.length > 0
+        ? req.user.teams.map(t => (t._id || t).toString())
+        : (req.user.team ? [(req.user.team._id || req.user.team).toString()] : []);
+
+      // If team is specified, validate it's in coach's teams
+      if (playerData.team && !coachTeamIds.includes(playerData.team.toString())) {
+        return res.status(403).json({
+          success: false,
+          message: 'Not authorized to create player for this team'
+        });
+      }
+      // If no team specified, use first team
+      if (!playerData.team && coachTeamIds.length > 0) {
+        playerData.team = coachTeamIds[0];
+      }
     }
 
     // Verify team exists
@@ -310,12 +324,17 @@ export const updatePlayer = async (req, res) => {
     }
 
     // Check authorization for coaches
-    if (req.user.role === 'coach' &&
-        (!req.user.team || req.user.team._id.toString() !== player.team.toString())) {
-      return res.status(403).json({
-        success: false,
-        message: 'Not authorized to update this player'
-      });
+    if (req.user.role === 'coach') {
+      const coachTeamIds = req.user.teams?.length > 0
+        ? req.user.teams.map(t => (t._id || t).toString())
+        : (req.user.team ? [(req.user.team._id || req.user.team).toString()] : []);
+
+      if (!coachTeamIds.includes(player.team.toString())) {
+        return res.status(403).json({
+          success: false,
+          message: 'Not authorized to update this player'
+        });
+      }
     }
 
     // Prevent coaches from changing team
@@ -358,12 +377,17 @@ export const deletePlayer = async (req, res) => {
     }
 
     // Check authorization for coaches
-    if (req.user.role === 'coach' &&
-        (!req.user.team || req.user.team._id.toString() !== player.team.toString())) {
-      return res.status(403).json({
-        success: false,
-        message: 'Not authorized to delete this player'
-      });
+    if (req.user.role === 'coach') {
+      const coachTeamIds = req.user.teams?.length > 0
+        ? req.user.teams.map(t => (t._id || t).toString())
+        : (req.user.team ? [(req.user.team._id || req.user.team).toString()] : []);
+
+      if (!coachTeamIds.includes(player.team.toString())) {
+        return res.status(403).json({
+          success: false,
+          message: 'Not authorized to delete this player'
+        });
+      }
     }
 
     await player.deleteOne();

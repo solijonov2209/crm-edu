@@ -2,6 +2,14 @@ import Training from '../models/Training.js';
 import Player from '../models/Player.js';
 import { getFileUrl } from '../middleware/upload.js';
 
+// Helper function to get coach's team IDs
+const getCoachTeamIds = (user) => {
+  if (user.role !== 'coach') return null;
+  return user.teams?.length > 0
+    ? user.teams.map(t => (t._id || t).toString())
+    : (user.team ? [(user.team._id || user.team).toString()] : []);
+};
+
 // @desc    Get all trainings
 // @route   GET /api/trainings
 // @access  Private
@@ -19,9 +27,14 @@ export const getTrainings = async (req, res) => {
 
     const query = {};
 
-    // For coaches, only show their team's trainings
-    if (req.user.role === 'coach' && req.user.team) {
-      query.team = req.user.team._id;
+    // For coaches, only show their teams' trainings
+    if (req.user.role === 'coach') {
+      const coachTeamIds = getCoachTeamIds(req.user);
+      if (team && coachTeamIds.includes(team)) {
+        query.team = team;
+      } else if (coachTeamIds.length > 0) {
+        query.team = { $in: coachTeamIds };
+      }
     } else if (team) {
       query.team = team;
     }
@@ -78,12 +91,14 @@ export const getTraining = async (req, res) => {
     }
 
     // Check authorization for coaches
-    if (req.user.role === 'coach' &&
-        (!req.user.team || req.user.team._id.toString() !== training.team._id.toString())) {
-      return res.status(403).json({
-        success: false,
-        message: 'Not authorized to view this training'
-      });
+    if (req.user.role === 'coach') {
+      const coachTeamIds = getCoachTeamIds(req.user);
+      if (!coachTeamIds.includes(training.team._id.toString())) {
+        return res.status(403).json({
+          success: false,
+          message: 'Not authorized to view this training'
+        });
+      }
     }
 
     res.status(200).json({
@@ -106,9 +121,20 @@ export const createTraining = async (req, res) => {
   try {
     const trainingData = { ...req.body };
 
-    // For coaches, force team to be their team
-    if (req.user.role === 'coach' && req.user.team) {
-      trainingData.team = req.user.team._id;
+    // For coaches, validate team access
+    if (req.user.role === 'coach') {
+      const coachTeamIds = getCoachTeamIds(req.user);
+      // If team is specified in body, validate it's in coach's teams
+      if (trainingData.team && !coachTeamIds.includes(trainingData.team.toString())) {
+        return res.status(403).json({
+          success: false,
+          message: 'Not authorized to create training for this team'
+        });
+      }
+      // If no team specified, use first team
+      if (!trainingData.team && coachTeamIds.length > 0) {
+        trainingData.team = coachTeamIds[0];
+      }
     }
 
     trainingData.coach = req.user._id;
@@ -160,12 +186,14 @@ export const updateTraining = async (req, res) => {
     }
 
     // Check authorization for coaches
-    if (req.user.role === 'coach' &&
-        (!req.user.team || req.user.team._id.toString() !== training.team.toString())) {
-      return res.status(403).json({
-        success: false,
-        message: 'Not authorized to update this training'
-      });
+    if (req.user.role === 'coach') {
+      const coachTeamIds = getCoachTeamIds(req.user);
+      if (!coachTeamIds.includes(training.team.toString())) {
+        return res.status(403).json({
+          success: false,
+          message: 'Not authorized to update this training'
+        });
+      }
     }
 
     training = await Training.findByIdAndUpdate(
@@ -205,12 +233,14 @@ export const deleteTraining = async (req, res) => {
     }
 
     // Check authorization for coaches
-    if (req.user.role === 'coach' &&
-        (!req.user.team || req.user.team._id.toString() !== training.team.toString())) {
-      return res.status(403).json({
-        success: false,
-        message: 'Not authorized to delete this training'
-      });
+    if (req.user.role === 'coach') {
+      const coachTeamIds = getCoachTeamIds(req.user);
+      if (!coachTeamIds.includes(training.team.toString())) {
+        return res.status(403).json({
+          success: false,
+          message: 'Not authorized to delete this training'
+        });
+      }
     }
 
     await training.deleteOne();
@@ -372,12 +402,14 @@ export const uploadTrainingPlan = async (req, res) => {
     }
 
     // Check authorization for coaches
-    if (req.user.role === 'coach' &&
-        (!req.user.team || req.user.team._id.toString() !== training.team.toString())) {
-      return res.status(403).json({
-        success: false,
-        message: 'Not authorized to update this training'
-      });
+    if (req.user.role === 'coach') {
+      const coachTeamIds = getCoachTeamIds(req.user);
+      if (!coachTeamIds.includes(training.team.toString())) {
+        return res.status(403).json({
+          success: false,
+          message: 'Not authorized to update this training'
+        });
+      }
     }
 
     training.trainingPlan = {
