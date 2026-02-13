@@ -324,7 +324,10 @@
     "startingXI": "Стартовый состав",
     "benchPlayers": "Запасные игроки",
     "ratings": "Рейтинги",
-    "ratingsDescription": "Оцените игроков от 1 до 10. 0 = не оценено."
+    "ratingsDescription": "Оцените игроков от 1 до 10. 0 = не оценено.",
+    "year": "Год",
+    "month": "Месяц",
+    "filterByPeriod": "Фильтр по периоду"
   },
   "tactics": {
     "title": "Тактический редактор",

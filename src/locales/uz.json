@@ -324,7 +324,10 @@
     "startingXI": "Asosiy tarkib",
     "benchPlayers": "Zaxira o'yinchilar",
     "ratings": "Reytinglar",
-    "ratingsDescription": "O'yinchilarga 1 dan 10 gacha baho qo'ying. 0 = baho qo'yilmagan."
+    "ratingsDescription": "O'yinchilarga 1 dan 10 gacha baho qo'ying. 0 = baho qo'yilmagan.",
+    "year": "Yil",
+    "month": "Oy",
+    "filterByPeriod": "Davr bo'yicha filtr"
   },
   "tactics": {
     "title": "Taktika muharriri",

@@ -6,6 +6,7 @@ import { trainingsAPI, teamsAPI, playersAPI } from '../../utils/api';
 import { useAuth } from '../../context/AuthContext';
 import { Card, Loading, Button, Input, Select, Modal, Badge, EmptyState, ConfirmDialog, Avatar } from '../../components/common';
 import { Plus, Calendar, Edit, Trash2, Users, CheckCircle, XCircle, Clock, Camera, Video, Star, MessageSquare, Save, Eye, Link, X, Play, FileText, Download } from 'lucide-react';
+import { useLocation } from 'react-router-dom';
 import { formatDate, getStatusColor, trainingTypes } from '../../utils/helpers';
 import toast from 'react-hot-toast';
 
@@ -935,6 +936,7 @@ const TrainingDetailModal = ({ training, onClose, t, isReadOnly = false }) => {
 const Trainings = () => {
   const { t } = useTranslation();
   const { user, isAdmin, isCoach } = useAuth();
+  const location = useLocation();
   const queryClient = useQueryClient();
   const [selectedTeam, setSelectedTeam] = useState('');
   const [selectedYear, setSelectedYear] = useState('');
@@ -943,6 +945,15 @@ const Trainings = () => {
   const [editingTraining, setEditingTraining] = useState(null);
   const [deletingTraining, setDeletingTraining] = useState(null);
   const [viewingTrainingId, setViewingTrainingId] = useState(null);
+
+  // Handle navigation from calendar - open training detail
+  useEffect(() => {
+    if (location.state?.viewTrainingId) {
+      setViewingTrainingId(location.state.viewTrainingId);
+      // Clear the state so it doesn't re-trigger on re-renders
+      window.history.replaceState({}, document.title);
+    }
+  }, [location.state]);
 
   // Generate year options (last 3 years to next year)
   const yearOptions = (() => {
@@ -1024,9 +1035,17 @@ const Trainings = () => {
     select: (res) => res.data,
   });
 
-  // Get fresh training data from query (auto-updates when query is invalidated)
+  // Fetch single training by ID when navigating from calendar (may not be in filtered list)
+  const { data: singleTrainingData } = useQuery({
+    queryKey: ['training', viewingTrainingId],
+    queryFn: () => trainingsAPI.getById(viewingTrainingId),
+    enabled: !!viewingTrainingId && !trainingsData?.trainings?.find(t => t._id === viewingTrainingId),
+    select: (res) => res.data.training || res.data,
+  });
+
+  // Get fresh training data from query or single fetch
   const viewingTraining = viewingTrainingId
-    ? trainingsData?.trainings?.find(t => t._id === viewingTrainingId)
+    ? trainingsData?.trainings?.find(t => t._id === viewingTrainingId) || singleTrainingData || null
     : null;
 
   const { data: teamsData } = useQuery({
