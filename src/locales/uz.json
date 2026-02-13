@@ -106,7 +106,17 @@
     "statistics": "Statistika",
     "deleteConfirm": "Haqiqatan ham bu jamoani o'chirmoqchimisiz?",
     "viewTrainings": "Mashg'ulotlarni ko'rish",
-    "teamDetails": "Jamoa tafsilotlari"
+    "viewMatches": "O'yinlarni ko'rish",
+    "viewPlayers": "O'yinchilarni ko'rish",
+    "teamDetails": "Jamoa tafsilotlari",
+    "tabs": {
+      "trainings": "Mashg'ulotlar",
+      "matches": "O'yinlar",
+      "players": "O'yinchilar"
+    },
+    "attendanceRate": "Davomat foizi",
+    "recentForm": "So'nggi shakl",
+    "injuredPlayers": "Jarohatli o'yinchilar"
   },
   "players": {
     "title": "O'yinchilar",
