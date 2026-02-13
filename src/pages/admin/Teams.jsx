@@ -5,8 +5,8 @@ import { useForm } from 'react-hook-form';
 import { teamsAPI, usersAPI, trainingsAPI, matchesAPI, playersAPI } from '../../utils/api';
 import { useAuth } from '../../context/AuthContext';
 import { Card, Loading, Button, Input, Select, Modal, Badge, EmptyState, ConfirmDialog, Avatar } from '../../components/common';
-import { Plus, Edit, Trash2, Users, Trophy, Shield, Calendar, Eye, CheckCircle, XCircle, Clock, Star, ChevronRight, ArrowLeft, Gamepad2, AlertTriangle } from 'lucide-react';
-import { formatDate, getStatusColor } from '../../utils/helpers';
+import { Plus, Edit, Trash2, Users, Trophy, Shield, Calendar, Eye, CheckCircle, XCircle, Clock, Star, ChevronRight, ArrowLeft, Gamepad2, AlertTriangle, MapPin, Target, CreditCard, ArrowLeftRight } from 'lucide-react';
+import { formatDate, getStatusColor, getResultColor, formations } from '../../utils/helpers';
 import toast from 'react-hot-toast';
 
 const TeamForm = ({ team, coaches, onSubmit, onClose, loading }) => {
@@ -101,8 +101,184 @@ const TeamForm = ({ team, coaches, onSubmit, onClose, loading }) => {
   );
 };
 
+// Match Detail View (read-only for viewing from team detail)
+const MatchDetailView = ({ match, onBack, t }) => {
+  // Fetch team players
+  const { data: playersData, isLoading } = useQuery({
+    queryKey: ['players', match?.team?._id],
+    queryFn: () => playersAPI.getByTeam(match?.team?._id),
+    enabled: !!match?.team?._id,
+    select: (res) => res.data.players,
+  });
+
+  if (!match) return null;
+
+  const getPlayerName = (playerId) => {
+    if (!playerId) return '-';
+    if (typeof playerId === 'object') {
+      return `${playerId.firstName} ${playerId.lastName}`;
+    }
+    const player = playersData?.find(p => p._id === playerId);
+    return player ? `${player.firstName} ${player.lastName}` : '-';
+  };
+
+  return (
+    <div className="space-y-4 sm:space-y-6">
+      {/* Header with Back Button */}
+      <div className="flex items-center gap-3 sm:gap-4 pb-4 border-b border-gray-100">
+        <button
+          onClick={onBack}
+          className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+        >
+          <ArrowLeft className="w-5 h-5 text-gray-600" />
+        </button>
+        <div className="flex-1 min-w-0">
+          <h2 className="text-lg sm:text-xl font-bold text-gray-900 truncate">{match.team?.name}</h2>
+          <p className="text-sm text-gray-500">
+            {formatDate(match.date || match.matchDate)} | {match.kickoffTime}
+          </p>
+        </div>
+        <Badge className={getStatusColor(match.status)}>
+          {t(`matches.statuses.${match.status}`)}
+        </Badge>
+      </div>
+
+      {/* Match Score */}
+      <div className="text-center py-4 sm:py-6 bg-gray-50 rounded-xl">
+        <div className="flex items-center justify-center gap-4 sm:gap-8 mb-3">
+          <div className="text-center">
+            <p className="font-bold text-base sm:text-lg text-gray-900">{match.team?.name}</p>
+            <p className="text-xs sm:text-sm text-gray-500">{match.isHome ? t('matches.home') : t('matches.away')}</p>
+          </div>
+          <div className="px-4 sm:px-6 py-2 sm:py-3 bg-white rounded-lg shadow-sm">
+            <p className="text-2xl sm:text-3xl font-bold text-gray-900">
+              {match.score?.home || 0} - {match.score?.away || 0}
+            </p>
+          </div>
+          <div className="text-center">
+            <p className="font-bold text-base sm:text-lg text-gray-900">{match.opponent?.name}</p>
+            <p className="text-xs sm:text-sm text-gray-500">{match.isHome ? t('matches.away') : t('matches.home')}</p>
+          </div>
+        </div>
+        <p className="text-xs sm:text-sm text-gray-500">
+          <MapPin className="w-3 h-3 sm:w-4 sm:h-4 inline mr-1" />
+          {match.venue || '-'} | {match.competition || 'Friendly'}
+        </p>
+      </div>
+
+      {/* Match Events */}
+      {isLoading ? (
+        <Loading />
+      ) : (
+        <div className="max-h-[300px] sm:max-h-[350px] overflow-y-auto space-y-4">
+          {/* Goals */}
+          {match.goals?.length > 0 && (
+            <div>
+              <h4 className="font-medium text-gray-900 mb-2 flex items-center gap-2 text-sm sm:text-base">
+                <Target className="w-4 h-4 sm:w-5 sm:h-5 text-green-600" />
+                {t('matches.goals')}
+              </h4>
+              <div className="space-y-2">
+                {match.goals.map((goal, index) => (
+                  <div key={index} className="flex items-center gap-3 p-2 sm:p-3 bg-green-50 rounded-lg">
+                    <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-green-100 flex items-center justify-center">
+                      <Target className="w-4 h-4 sm:w-5 sm:h-5 text-green-600" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-gray-900 text-sm sm:text-base truncate">{getPlayerName(goal.player)}</p>
+                      {goal.assist && (
+                        <p className="text-xs sm:text-sm text-gray-500 truncate">
+                          {t('matches.assist')}: {getPlayerName(goal.assist)}
+                        </p>
+                      )}
+                    </div>
+                    <div className="text-right flex-shrink-0">
+                      <p className="font-bold text-gray-900 text-sm sm:text-base">{goal.minute}'</p>
+                      <p className="text-xs text-gray-500">{t(`matches.goalTypes.${goal.type}`)}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Cards */}
+          {match.cards?.length > 0 && (
+            <div>
+              <h4 className="font-medium text-gray-900 mb-2 flex items-center gap-2 text-sm sm:text-base">
+                <CreditCard className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-600" />
+                {t('matches.cards')}
+              </h4>
+              <div className="space-y-2">
+                {match.cards.map((card, index) => (
+                  <div key={index} className="flex items-center gap-3 p-2 sm:p-3 bg-yellow-50 rounded-lg">
+                    <div className={`w-5 h-7 sm:w-6 sm:h-8 rounded ${
+                      card.type === 'yellow' ? 'bg-yellow-400' :
+                      card.type === 'red' ? 'bg-red-500' : 'bg-gradient-to-b from-yellow-400 to-red-500'
+                    }`} />
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-gray-900 text-sm sm:text-base truncate">{getPlayerName(card.player)}</p>
+                      {card.reason && <p className="text-xs sm:text-sm text-gray-500 truncate">{card.reason}</p>}
+                    </div>
+                    <p className="font-bold text-gray-900 text-sm sm:text-base flex-shrink-0">{card.minute}'</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Substitutions */}
+          {match.substitutions?.length > 0 && (
+            <div>
+              <h4 className="font-medium text-gray-900 mb-2 flex items-center gap-2 text-sm sm:text-base">
+                <ArrowLeftRight className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600" />
+                {t('matches.substitutions')}
+              </h4>
+              <div className="space-y-2">
+                {match.substitutions.map((sub, index) => (
+                  <div key={index} className="flex items-center gap-3 p-2 sm:p-3 bg-blue-50 rounded-lg">
+                    <ArrowLeftRight className="w-4 h-4 sm:w-5 sm:h-5 text-blue-500 flex-shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="text-red-500">↓</span>
+                        <span className="font-medium text-sm truncate">{getPlayerName(sub.playerOut)}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-green-500">↑</span>
+                        <span className="font-medium text-sm truncate">{getPlayerName(sub.playerIn)}</span>
+                      </div>
+                    </div>
+                    <div className="text-right flex-shrink-0">
+                      <p className="font-bold text-gray-900 text-sm sm:text-base">{sub.minute}'</p>
+                      <p className="text-xs text-gray-500">{t(`matches.subReasons.${sub.reason}`)}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* No Events */}
+          {!match.goals?.length && !match.cards?.length && !match.substitutions?.length && (
+            <div className="text-center py-8 text-gray-500 text-sm sm:text-base">
+              {t('common.noData')}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Actions */}
+      <div className="flex justify-end pt-4 border-t border-gray-100">
+        <Button variant="secondary" onClick={onBack}>
+          {t('common.back')}
+        </Button>
+      </div>
+    </div>
+  );
+};
+
 // Team Detail Modal with Tabs (Trainings, Matches, Players)
-const TeamDetailModal = ({ team, onClose, onViewTraining, t }) => {
+const TeamDetailModal = ({ team, onClose, onViewTraining, onViewMatch, t }) => {
   useAuth();
   const [activeTab, setActiveTab] = useState('trainings');
 
@@ -181,31 +357,33 @@ const TeamDetailModal = ({ team, onClose, onViewTraining, t }) => {
   if (!team) return null;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Team Header */}
-      <div className="flex items-center gap-4 pb-4 border-b border-gray-100">
-        <div
-          className="w-16 h-16 rounded-xl flex items-center justify-center"
-          style={{ backgroundColor: team.primaryColor }}
-        >
-          <Shield className="w-8 h-8 text-white opacity-80" />
+      <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 pb-4 border-b border-gray-100">
+        <div className="flex items-center gap-3 sm:gap-4">
+          <div
+            className="w-12 h-12 sm:w-16 sm:h-16 rounded-xl flex items-center justify-center flex-shrink-0"
+            style={{ backgroundColor: team.primaryColor }}
+          >
+            <Shield className="w-6 h-6 sm:w-8 sm:h-8 text-white opacity-80" />
+          </div>
+          <div className="min-w-0">
+            <h2 className="text-lg sm:text-xl font-bold text-gray-900 truncate">{team.name}</h2>
+            <p className="text-sm sm:text-base text-gray-500">{team.ageCategory} ({team.birthYear})</p>
+            {team.coach && (
+              <p className="text-xs sm:text-sm text-gray-600 truncate">
+                {t('teams.coach')}: {team.coach.firstName} {team.coach.lastName}
+              </p>
+            )}
+          </div>
         </div>
-        <div>
-          <h2 className="text-xl font-bold text-gray-900">{team.name}</h2>
-          <p className="text-gray-500">{team.ageCategory} ({team.birthYear})</p>
-          {team.coach && (
-            <p className="text-sm text-gray-600">
-              {t('teams.coach')}: {team.coach.firstName} {team.coach.lastName}
-            </p>
-          )}
-        </div>
-        <div className="ml-auto text-right">
-          <div className="flex items-center gap-3 text-sm">
+        <div className="sm:ml-auto text-left sm:text-right mt-2 sm:mt-0">
+          <div className="flex items-center gap-2 sm:gap-3 text-xs sm:text-sm">
             <span className="text-green-600 font-semibold">{team.statistics?.wins || 0} {t('dashboard.wins')}</span>
             <span className="text-yellow-600 font-semibold">{team.statistics?.draws || 0} {t('dashboard.draws')}</span>
             <span className="text-red-600 font-semibold">{team.statistics?.losses || 0} {t('dashboard.losses')}</span>
           </div>
-          <p className="text-sm text-gray-500 mt-1">
+          <p className="text-xs sm:text-sm text-gray-500 mt-1">
             <Users className="w-3 h-3 inline mr-1" />
             {team.playerCount || 0} {t('players.title').toLowerCase()}
           </p>
@@ -213,17 +391,17 @@ const TeamDetailModal = ({ team, onClose, onViewTraining, t }) => {
       </div>
 
       {/* Quick Stats */}
-      <div className="grid grid-cols-3 gap-4">
-        <div className="bg-blue-50 rounded-lg p-3 text-center">
-          <p className="text-2xl font-bold text-blue-600">{avgAttendance}%</p>
-          <p className="text-xs text-blue-500">{t('teams.attendanceRate')}</p>
+      <div className="grid grid-cols-3 gap-2 sm:gap-4">
+        <div className="bg-blue-50 rounded-lg p-2 sm:p-3 text-center">
+          <p className="text-lg sm:text-2xl font-bold text-blue-600">{avgAttendance}%</p>
+          <p className="text-[10px] sm:text-xs text-blue-500">{t('teams.attendanceRate')}</p>
         </div>
-        <div className="bg-green-50 rounded-lg p-3 text-center">
-          <div className="flex items-center justify-center gap-1 mb-1">
+        <div className="bg-green-50 rounded-lg p-2 sm:p-3 text-center">
+          <div className="flex items-center justify-center gap-0.5 sm:gap-1 mb-1">
             {recentForm.length > 0 ? recentForm.map((r, i) => (
               <span
                 key={i}
-                className={`w-6 h-6 rounded text-xs font-bold flex items-center justify-center ${
+                className={`w-5 h-5 sm:w-6 sm:h-6 rounded text-[10px] sm:text-xs font-bold flex items-center justify-center ${
                   r === 'W' ? 'bg-green-500 text-white' :
                   r === 'L' ? 'bg-red-500 text-white' :
                   'bg-yellow-500 text-white'
@@ -233,84 +411,87 @@ const TeamDetailModal = ({ team, onClose, onViewTraining, t }) => {
               </span>
             )) : <span className="text-gray-400">-</span>}
           </div>
-          <p className="text-xs text-green-500">{t('teams.recentForm')}</p>
+          <p className="text-[10px] sm:text-xs text-green-500">{t('teams.recentForm')}</p>
         </div>
-        <div className="bg-orange-50 rounded-lg p-3 text-center">
-          <p className="text-2xl font-bold text-orange-600">{injuredPlayers.length}</p>
-          <p className="text-xs text-orange-500">{t('teams.injuredPlayers')}</p>
+        <div className="bg-orange-50 rounded-lg p-2 sm:p-3 text-center">
+          <p className="text-lg sm:text-2xl font-bold text-orange-600">{injuredPlayers.length}</p>
+          <p className="text-[10px] sm:text-xs text-orange-500">{t('teams.injuredPlayers')}</p>
         </div>
       </div>
 
       {/* Tabs */}
-      <div className="flex border-b border-gray-200">
+      <div className="flex border-b border-gray-200 overflow-x-auto">
         {tabs.map((tab) => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className={`flex items-center gap-2 px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+            className={`flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-2 text-xs sm:text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
               activeTab === tab.id
                 ? 'border-primary-500 text-primary-600'
                 : 'border-transparent text-gray-500 hover:text-gray-700'
             }`}
           >
-            <tab.icon className="w-4 h-4" />
+            <tab.icon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             {tab.label}
           </button>
         ))}
       </div>
 
       {/* Tab Content */}
-      <div className="min-h-[300px]">
+      <div className="min-h-[250px] sm:min-h-[300px]">
         {/* Trainings Tab */}
         {activeTab === 'trainings' && (
           trainingsLoading ? (
             <Loading />
           ) : !trainingsData || trainingsData.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
+            <div className="text-center py-8 text-gray-500 text-sm sm:text-base">
               {t('common.noData')}
             </div>
           ) : (
-            <div className="space-y-3 max-h-[350px] overflow-y-auto">
+            <div className="space-y-2 sm:space-y-3 max-h-[300px] sm:max-h-[350px] overflow-y-auto">
               {trainingsData.map((training) => (
                 <div
                   key={training._id}
                   onClick={() => onViewTraining(training)}
-                  className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 cursor-pointer transition-colors"
+                  className="flex items-center justify-between p-2 sm:p-4 bg-gray-50 rounded-lg hover:bg-gray-100 cursor-pointer transition-colors"
                 >
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-white flex items-center justify-center shadow-sm">
+                  <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                    <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-white flex items-center justify-center shadow-sm flex-shrink-0">
                       {getStatusIcon(training.status)}
                     </div>
-                    <div>
-                      <p className="font-medium text-gray-900">
+                    <div className="min-w-0">
+                      <p className="font-medium text-gray-900 text-sm sm:text-base truncate">
                         {formatDate(training.date)}
                       </p>
-                      <p className="text-sm text-gray-500">
+                      <p className="text-xs sm:text-sm text-gray-500 truncate">
                         {training.startTime} - {training.endTime} | {t(`trainings.types.${training.type}`)}
                       </p>
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-4">
-                    <div className="text-center">
-                      <p className="text-lg font-bold text-gray-900">
+                  <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
+                    <div className="text-center hidden sm:block">
+                      <p className="text-base sm:text-lg font-bold text-gray-900">
                         {training.attendanceStats?.percentage || 0}%
                       </p>
-                      <p className="text-xs text-gray-500">{t('trainings.attendance')}</p>
+                      <p className="text-[10px] sm:text-xs text-gray-500">{t('trainings.attendance')}</p>
                     </div>
+                    <p className="text-sm font-bold text-gray-900 sm:hidden">
+                      {training.attendanceStats?.percentage || 0}%
+                    </p>
 
                     {training.overallRating && (
-                      <div className="flex items-center gap-1 px-2 py-1 bg-yellow-100 rounded-lg">
-                        <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
-                        <span className="font-bold text-yellow-700">{training.overallRating}</span>
+                      <div className="flex items-center gap-0.5 sm:gap-1 px-1.5 sm:px-2 py-0.5 sm:py-1 bg-yellow-100 rounded-lg">
+                        <Star className="w-3 h-3 sm:w-4 sm:h-4 text-yellow-500 fill-yellow-500" />
+                        <span className="font-bold text-yellow-700 text-xs sm:text-sm">{training.overallRating}</span>
                       </div>
                     )}
 
-                    <Badge className={getStatusColor(training.status)}>
+                    <Badge className={`${getStatusColor(training.status)} text-[10px] sm:text-xs hidden sm:inline-flex`}>
                       {t(`trainings.statuses.${training.status}`)}
                     </Badge>
 
-                    <ChevronRight className="w-5 h-5 text-gray-400" />
+                    <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400" />
                   </div>
                 </div>
               ))}
@@ -323,34 +504,35 @@ const TeamDetailModal = ({ team, onClose, onViewTraining, t }) => {
           matchesLoading ? (
             <Loading />
           ) : !matchesData || matchesData.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
+            <div className="text-center py-8 text-gray-500 text-sm sm:text-base">
               {t('common.noData')}
             </div>
           ) : (
-            <div className="space-y-3 max-h-[350px] overflow-y-auto">
+            <div className="space-y-2 sm:space-y-3 max-h-[300px] sm:max-h-[350px] overflow-y-auto">
               {matchesData.map((match) => (
                 <div
                   key={match._id}
-                  className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                  onClick={() => onViewMatch && onViewMatch(match)}
+                  className="flex items-center justify-between p-2 sm:p-4 bg-gray-50 rounded-lg hover:bg-gray-100 cursor-pointer transition-colors"
                 >
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-white flex items-center justify-center shadow-sm">
-                      <Gamepad2 className={`w-5 h-5 ${match.status === 'completed' ? 'text-green-500' : 'text-primary-500'}`} />
+                  <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                    <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-white flex items-center justify-center shadow-sm flex-shrink-0">
+                      <Gamepad2 className={`w-4 h-4 sm:w-5 sm:h-5 ${match.status === 'completed' ? 'text-green-500' : 'text-primary-500'}`} />
                     </div>
-                    <div>
-                      <p className="font-medium text-gray-900">
-                        vs {match.opponent}
+                    <div className="min-w-0">
+                      <p className="font-medium text-gray-900 text-sm sm:text-base truncate">
+                        vs {match.opponent?.name || match.opponent}
                       </p>
-                      <p className="text-sm text-gray-500">
-                        {formatDate(match.date)} | {match.kickoffTime} | {match.isHome ? t('matches.home') : t('matches.away')}
+                      <p className="text-xs sm:text-sm text-gray-500 truncate">
+                        {formatDate(match.date || match.matchDate)} | {match.kickoffTime} | {match.isHome ? t('matches.home') : t('matches.away')}
                       </p>
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
                     {match.status === 'completed' && (
                       <div className="text-center">
-                        <p className="text-xl font-bold text-gray-900">
+                        <p className="text-base sm:text-xl font-bold text-gray-900">
                           {match.score?.home || 0} - {match.score?.away || 0}
                         </p>
                       </div>
@@ -358,9 +540,11 @@ const TeamDetailModal = ({ team, onClose, onViewTraining, t }) => {
 
                     {getMatchResultBadge(match)}
 
-                    <Badge className={getStatusColor(match.status)}>
+                    <Badge className={`${getStatusColor(match.status)} text-[10px] sm:text-xs hidden sm:inline-flex`}>
                       {t(`matches.statuses.${match.status}`)}
                     </Badge>
+
+                    <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400" />
                   </div>
                 </div>
               ))}
@@ -373,56 +557,61 @@ const TeamDetailModal = ({ team, onClose, onViewTraining, t }) => {
           playersLoading ? (
             <Loading />
           ) : !playersData || playersData.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
+            <div className="text-center py-8 text-gray-500 text-sm sm:text-base">
               {t('common.noData')}
             </div>
           ) : (
-            <div className="space-y-3 max-h-[350px] overflow-y-auto">
+            <div className="space-y-2 sm:space-y-3 max-h-[300px] sm:max-h-[350px] overflow-y-auto">
               {playersData.map((player) => (
                 <div
                   key={player._id}
-                  className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                  className="flex items-center justify-between p-2 sm:p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
                 >
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2 sm:gap-3 min-w-0">
                     <Avatar
                       src={player.photo}
                       firstName={player.firstName}
                       lastName={player.lastName}
                       size="small"
                     />
-                    <div>
-                      <p className="font-medium text-gray-900">
+                    <div className="min-w-0">
+                      <p className="font-medium text-gray-900 text-sm sm:text-base truncate">
                         {player.firstName} {player.lastName}
                         {player.injuryStatus === 'injured' && (
-                          <AlertTriangle className="w-4 h-4 text-orange-500 inline ml-2" />
+                          <AlertTriangle className="w-3 h-3 sm:w-4 sm:h-4 text-orange-500 inline ml-1 sm:ml-2" />
                         )}
                       </p>
-                      <p className="text-sm text-gray-500">
+                      <p className="text-xs sm:text-sm text-gray-500 truncate">
                         #{player.jerseyNumber} | {t(`players.positions.${player.position}`)}
                       </p>
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-4">
-                    <div className="text-center">
-                      <p className="text-sm font-semibold text-gray-900">
+                  <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
+                    <div className="text-center hidden sm:block">
+                      <p className="text-xs sm:text-sm font-semibold text-gray-900">
                         {player.statistics?.goals || 0} {t('players.goals')}
                       </p>
-                      <p className="text-xs text-gray-500">
+                      <p className="text-[10px] sm:text-xs text-gray-500">
                         {player.statistics?.assists || 0} {t('players.assists')}
+                      </p>
+                    </div>
+                    <div className="text-center sm:hidden">
+                      <p className="text-xs font-semibold text-gray-900">
+                        {player.statistics?.goals || 0}G / {player.statistics?.assists || 0}A
                       </p>
                     </div>
 
                     {player.overallRating && (
-                      <div className="flex items-center gap-1 px-2 py-1 bg-primary-100 rounded-lg">
-                        <span className="font-bold text-primary-700">{player.overallRating}</span>
+                      <div className="flex items-center gap-0.5 sm:gap-1 px-1.5 sm:px-2 py-0.5 sm:py-1 bg-primary-100 rounded-lg">
+                        <span className="font-bold text-primary-700 text-xs sm:text-sm">{player.overallRating}</span>
                       </div>
                     )}
 
                     {player.injuryStatus === 'injured' ? (
-                      <Badge className="bg-orange-100 text-orange-700">{t('players.injured')}</Badge>
+                      <Badge className="bg-orange-100 text-orange-700 text-[10px] sm:text-xs">{t('players.injured')}</Badge>
                     ) : (
-                      <Badge className="bg-green-100 text-green-700">{t('players.available')}</Badge>
+                      <Badge className="bg-green-100 text-green-700 text-[10px] sm:text-xs hidden sm:inline-flex">{t('players.available')}</Badge>
                     )}
                   </div>
                 </div>
@@ -593,6 +782,7 @@ const Teams = () => {
   const [deletingTeam, setDeletingTeam] = useState(null);
   const [viewingTeam, setViewingTeam] = useState(null);
   const [viewingTraining, setViewingTraining] = useState(null);
+  const [viewingMatch, setViewingMatch] = useState(null);
 
   const { data: teamsData, isLoading } = useQuery({
     queryKey: ['teams'],
@@ -793,7 +983,7 @@ const Teams = () => {
 
       {/* Team Detail Modal */}
       <Modal
-        isOpen={!!viewingTeam && !viewingTraining}
+        isOpen={!!viewingTeam && !viewingTraining && !viewingMatch}
         onClose={() => setViewingTeam(null)}
         title={t('teams.teamDetails')}
         size="xlarge"
@@ -802,6 +992,7 @@ const Teams = () => {
           team={viewingTeam}
           onClose={() => setViewingTeam(null)}
           onViewTraining={(training) => setViewingTraining(training)}
+          onViewMatch={(match) => setViewingMatch(match)}
           t={t}
         />
       </Modal>
@@ -816,6 +1007,20 @@ const Teams = () => {
         <TrainingResultView
           training={viewingTraining}
           onBack={() => setViewingTraining(null)}
+          t={t}
+        />
+      </Modal>
+
+      {/* Match Detail Modal */}
+      <Modal
+        isOpen={!!viewingMatch}
+        onClose={() => setViewingMatch(null)}
+        title={t('matches.matchDetails')}
+        size="xlarge"
+      >
+        <MatchDetailView
+          match={viewingMatch}
+          onBack={() => setViewingMatch(null)}
           t={t}
         />
       </Modal>
