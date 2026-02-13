@@ -5,6 +5,7 @@ import { useForm } from 'react-hook-form';
 import { matchesAPI, teamsAPI, playersAPI } from '../../utils/api';
 import { useAuth } from '../../context/AuthContext';
 import { Card, Loading, Button, Input, Select, Modal, Badge, EmptyState, ConfirmDialog, Avatar } from '../../components/common';
+import { useLocation } from 'react-router-dom';
 import { Plus, Trophy, Edit, Trash2, Calendar, MapPin, Eye, Users, Target, CreditCard, ArrowLeftRight, BarChart3, Star, Save, X, Check } from 'lucide-react';
 import { formatDate, getStatusColor, getResultColor, formations } from '../../utils/helpers';
 import toast from 'react-hot-toast';
@@ -1219,12 +1220,74 @@ const MatchDetailModal = ({ match, onClose, t, isReadOnly = false }) => {
 const Matches = () => {
   const { t } = useTranslation();
   const { user, isAdmin, isCoach } = useAuth();
+  const location = useLocation();
   const queryClient = useQueryClient();
   const [selectedTeam, setSelectedTeam] = useState('');
+  const [selectedYear, setSelectedYear] = useState('');
+  const [selectedMonth, setSelectedMonth] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [editingMatch, setEditingMatch] = useState(null);
   const [deletingMatch, setDeletingMatch] = useState(null);
   const [viewingMatchId, setViewingMatchId] = useState(null);
+
+  // Handle navigation from calendar - open match detail
+  useEffect(() => {
+    if (location.state?.viewMatchId) {
+      setViewingMatchId(location.state.viewMatchId);
+      // Clear the state so it doesn't re-trigger on re-renders
+      window.history.replaceState({}, document.title);
+    }
+  }, [location.state]);
+
+  // Generate year options (last 3 years to next year)
+  const yearOptions = (() => {
+    const options = [{ value: '', label: t('common.all') }];
+    const currentYear = new Date().getFullYear();
+    for (let year = currentYear - 3; year <= currentYear + 1; year++) {
+      options.push({ value: String(year), label: String(year) });
+    }
+    return options;
+  })();
+
+  // Generate month options (1-12)
+  const monthOptions = (() => {
+    const options = [{ value: '', label: t('common.all') }];
+    const monthNames = [
+      t('months.january'), t('months.february'), t('months.march'),
+      t('months.april'), t('months.may'), t('months.june'),
+      t('months.july'), t('months.august'), t('months.september'),
+      t('months.october'), t('months.november'), t('months.december')
+    ];
+    for (let i = 0; i < 12; i++) {
+      options.push({ value: String(i + 1).padStart(2, '0'), label: monthNames[i] });
+    }
+    return options;
+  })();
+
+  // Calculate date range from selected year and month
+  const getDateRange = (year, month) => {
+    if (!year && !month) return { startDate: undefined, endDate: undefined };
+
+    if (year && month) {
+      const y = parseInt(year);
+      const m = parseInt(month);
+      const startDate = new Date(y, m - 1, 1).toISOString().split('T')[0];
+      const endDate = new Date(y, m, 0).toISOString().split('T')[0];
+      return { startDate, endDate };
+    } else if (year) {
+      const y = parseInt(year);
+      const startDate = new Date(y, 0, 1).toISOString().split('T')[0];
+      const endDate = new Date(y, 11, 31).toISOString().split('T')[0];
+      return { startDate, endDate };
+    } else if (month) {
+      const y = new Date().getFullYear();
+      const m = parseInt(month);
+      const startDate = new Date(y, m - 1, 1).toISOString().split('T')[0];
+      const endDate = new Date(y, m, 0).toISOString().split('T')[0];
+      return { startDate, endDate };
+    }
+    return { startDate: undefined, endDate: undefined };
+  };
 
   // Reset selectedTeam when user changes (coach vs admin)
   // Support multiple teams for coaches
@@ -1240,18 +1303,30 @@ const Matches = () => {
     }
   }, [isCoach, user?.teams, user?.team]);
 
+  const { startDate, endDate } = getDateRange(selectedYear, selectedMonth);
+
   const { data: matchesData, isLoading } = useQuery({
-    queryKey: ['matches', selectedTeam],
+    queryKey: ['matches', selectedTeam, selectedYear, selectedMonth],
     queryFn: () => matchesAPI.getAll({
       team: selectedTeam || undefined,
-      limit: 50
+      startDate,
+      endDate,
+      limit: 100
     }),
     select: (res) => res.data,
   });
 
-  // Get fresh match data from query (auto-updates when query is invalidated)
+  // Fetch single match by ID when navigating from calendar (may not be in filtered list)
+  const { data: singleMatchData } = useQuery({
+    queryKey: ['match', viewingMatchId],
+    queryFn: () => matchesAPI.getById(viewingMatchId),
+    enabled: !!viewingMatchId && !matchesData?.matches?.find(m => m._id === viewingMatchId),
+    select: (res) => res.data.match || res.data,
+  });
+
+  // Get fresh match data from query or single fetch
   const viewingMatch = viewingMatchId
-    ? matchesData?.matches?.find(m => m._id === viewingMatchId)
+    ? matchesData?.matches?.find(m => m._id === viewingMatchId) || singleMatchData || null
     : null;
 
   const { data: teamsData } = useQuery({
@@ -1353,12 +1428,41 @@ const Matches = () => {
 
       {/* Filter */}
       <Card className="p-4">
-        <Select
-          options={teamOptions}
-          value={selectedTeam}
-          onChange={(e) => setSelectedTeam(e.target.value)}
-          className="w-full sm:w-64"
-        />
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              {t('teams.title')}
+            </label>
+            <Select
+              options={teamOptions}
+              value={selectedTeam}
+              onChange={(e) => setSelectedTeam(e.target.value)}
+              className="w-full"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              {t('matches.year')}
+            </label>
+            <Select
+              options={yearOptions}
+              value={selectedYear}
+              onChange={(e) => setSelectedYear(e.target.value)}
+              className="w-full"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              {t('matches.month')}
+            </label>
+            <Select
+              options={monthOptions}
+              value={selectedMonth}
+              onChange={(e) => setSelectedMonth(e.target.value)}
+              className="w-full"
+            />
+          </div>
+        </div>
       </Card>
 
       {/* Matches List */}

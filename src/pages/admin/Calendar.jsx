@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { trainingsAPI, matchesAPI, teamsAPI } from '../../utils/api';
 import { Card, Loading, Select, Badge } from '../../components/common';
@@ -8,7 +9,9 @@ import { useAuth } from '../../context/AuthContext';
 
 const Calendar = () => {
   const { t } = useTranslation();
-  const { user, isCoach } = useAuth();
+  const navigate = useNavigate();
+  const { user, isCoach, isAdmin } = useAuth();
+  const basePath = isAdmin ? '/admin' : '/coach';
 
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedTeam, setSelectedTeam] = useState(() => {
@@ -248,25 +251,32 @@ const Calendar = () => {
                           {dateEvents.slice(0, 3).map((event, eventIndex) => (
                             <div
                               key={eventIndex}
-                              className={`text-xs p-1 rounded truncate ${
+                              className={`text-xs p-1 rounded truncate cursor-pointer hover:opacity-80 transition-opacity ${
                                 event.type === 'training'
-                                  ? 'bg-blue-100 text-blue-700'
-                                  : 'bg-green-100 text-green-700'
+                                  ? 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+                                  : 'bg-green-100 text-green-700 hover:bg-green-200'
                               }`}
                               title={event.type === 'training'
                                 ? `${event.time} - ${t('trainings.title')}: ${event.data.team?.name}`
                                 : `${event.time} - ${event.data.team?.name} vs ${event.data.opponent?.name}`
                               }
+                              onClick={() => {
+                                if (event.type === 'training') {
+                                  navigate(`${basePath}/trainings`, { state: { viewTrainingId: event.data._id } });
+                                } else {
+                                  navigate(`${basePath}/matches`, { state: { viewMatchId: event.data._id } });
+                                }
+                              }}
                             >
                               {event.type === 'training' ? (
                                 <span className="flex items-center gap-1">
-                                  <Dumbbell className="w-3 h-3" />
-                                  {event.time}
+                                  <Dumbbell className="w-3 h-3 flex-shrink-0" />
+                                  <span className="truncate">{event.time} {event.data.team?.name}</span>
                                 </span>
                               ) : (
                                 <span className="flex items-center gap-1">
-                                  <Trophy className="w-3 h-3" />
-                                  {event.time}
+                                  <Trophy className="w-3 h-3 flex-shrink-0" />
+                                  <span className="truncate">{event.time} {event.data.opponent?.name}</span>
                                 </span>
                               )}
                             </div>
@@ -311,7 +321,11 @@ const Calendar = () => {
           </div>
           <div className="space-y-3">
             {trainingsData?.filter(t => new Date(t.date) >= new Date()).slice(0, 5).map((training) => (
-              <div key={training._id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+              <div
+                key={training._id}
+                className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100 transition-colors"
+                onClick={() => navigate(`${basePath}/trainings`, { state: { viewTrainingId: training._id } })}
+              >
                 <div className="text-center min-w-[50px]">
                   <p className="text-lg font-bold text-gray-900">
                     {new Date(training.date).getDate()}
@@ -348,7 +362,11 @@ const Calendar = () => {
           </div>
           <div className="space-y-3">
             {matchesData?.filter(m => new Date(m.matchDate) >= new Date()).slice(0, 5).map((match) => (
-              <div key={match._id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+              <div
+                key={match._id}
+                className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100 transition-colors"
+                onClick={() => navigate(`${basePath}/matches`, { state: { viewMatchId: match._id } })}
+              >
                 <div className="text-center min-w-[50px]">
                   <p className="text-lg font-bold text-gray-900">
                     {new Date(match.matchDate).getDate()}
