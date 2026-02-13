@@ -2,10 +2,10 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
-import { teamsAPI, usersAPI, trainingsAPI } from '../../utils/api';
+import { teamsAPI, usersAPI, trainingsAPI, matchesAPI, playersAPI } from '../../utils/api';
 import { useAuth } from '../../context/AuthContext';
 import { Card, Loading, Button, Input, Select, Modal, Badge, EmptyState, ConfirmDialog, Avatar } from '../../components/common';
-import { Plus, Edit, Trash2, Users, Trophy, Shield, Calendar, Eye, CheckCircle, XCircle, Clock, Star, ChevronRight, ArrowLeft } from 'lucide-react';
+import { Plus, Edit, Trash2, Users, Trophy, Shield, Calendar, Eye, CheckCircle, XCircle, Clock, Star, ChevronRight, ArrowLeft, Gamepad2, AlertTriangle } from 'lucide-react';
 import { formatDate, getStatusColor } from '../../utils/helpers';
 import toast from 'react-hot-toast';
 
@@ -101,16 +101,33 @@ const TeamForm = ({ team, coaches, onSubmit, onClose, loading }) => {
   );
 };
 
-// Team Detail Modal with Trainings List
+// Team Detail Modal with Tabs (Trainings, Matches, Players)
 const TeamDetailModal = ({ team, onClose, onViewTraining, t }) => {
   useAuth();
+  const [activeTab, setActiveTab] = useState('trainings');
 
   // Fetch trainings for this team
-  const { data: trainingsData, isLoading } = useQuery({
+  const { data: trainingsData, isLoading: trainingsLoading } = useQuery({
     queryKey: ['trainings', team?._id],
     queryFn: () => trainingsAPI.getAll({ team: team?._id, limit: 50 }),
     enabled: !!team?._id,
     select: (res) => res.data?.trainings,
+  });
+
+  // Fetch matches for this team
+  const { data: matchesData, isLoading: matchesLoading } = useQuery({
+    queryKey: ['matches', team?._id],
+    queryFn: () => matchesAPI.getAll({ team: team?._id, limit: 50 }),
+    enabled: !!team?._id,
+    select: (res) => res.data?.matches,
+  });
+
+  // Fetch players for this team
+  const { data: playersData, isLoading: playersLoading } = useQuery({
+    queryKey: ['players', team?._id],
+    queryFn: () => playersAPI.getByTeam(team?._id),
+    enabled: !!team?._id,
+    select: (res) => res.data?.players,
   });
 
   const getStatusIcon = (status) => {
@@ -125,6 +142,41 @@ const TeamDetailModal = ({ team, onClose, onViewTraining, t }) => {
         return <Calendar className="w-4 h-4 text-primary-500" />;
     }
   };
+
+  const getMatchResultBadge = (match) => {
+    if (match.status !== 'completed') return null;
+    const ourScore = match.score?.home || 0;
+    const theirScore = match.score?.away || 0;
+    if (ourScore > theirScore) return <span className="px-2 py-0.5 rounded text-xs font-bold bg-green-100 text-green-700">G</span>;
+    if (ourScore < theirScore) return <span className="px-2 py-0.5 rounded text-xs font-bold bg-red-100 text-red-700">M</span>;
+    return <span className="px-2 py-0.5 rounded text-xs font-bold bg-yellow-100 text-yellow-700">D</span>;
+  };
+
+  // Calculate attendance rate
+  const avgAttendance = trainingsData?.length > 0
+    ? Math.round(trainingsData.reduce((sum, t) => sum + (t.attendanceStats?.percentage || 0), 0) / trainingsData.length)
+    : 0;
+
+  // Get recent form (last 5 matches)
+  const recentForm = matchesData
+    ?.filter(m => m.status === 'completed')
+    ?.slice(0, 5)
+    ?.map(m => {
+      const ourScore = m.score?.home || 0;
+      const theirScore = m.score?.away || 0;
+      if (ourScore > theirScore) return 'W';
+      if (ourScore < theirScore) return 'L';
+      return 'D';
+    }) || [];
+
+  // Get injured players
+  const injuredPlayers = playersData?.filter(p => p.injuryStatus === 'injured') || [];
+
+  const tabs = [
+    { id: 'trainings', label: t('teams.tabs.trainings'), icon: Calendar },
+    { id: 'matches', label: t('teams.tabs.matches'), icon: Gamepad2 },
+    { id: 'players', label: t('teams.tabs.players'), icon: Users },
+  ];
 
   if (!team) return null;
 
@@ -160,67 +212,223 @@ const TeamDetailModal = ({ team, onClose, onViewTraining, t }) => {
         </div>
       </div>
 
-      {/* Trainings List */}
-      <div>
-        <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
-          <Calendar className="w-5 h-5 text-primary-500" />
-          {t('trainings.title')}
-        </h3>
-
-        {isLoading ? (
-          <Loading />
-        ) : !trainingsData || trainingsData.length === 0 ? (
-          <div className="text-center py-8 text-gray-500">
-            {t('common.noData')}
-          </div>
-        ) : (
-          <div className="space-y-3 max-h-[400px] overflow-y-auto">
-            {trainingsData.map((training) => (
-              <div
-                key={training._id}
-                onClick={() => onViewTraining(training)}
-                className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 cursor-pointer transition-colors"
+      {/* Quick Stats */}
+      <div className="grid grid-cols-3 gap-4">
+        <div className="bg-blue-50 rounded-lg p-3 text-center">
+          <p className="text-2xl font-bold text-blue-600">{avgAttendance}%</p>
+          <p className="text-xs text-blue-500">{t('teams.attendanceRate')}</p>
+        </div>
+        <div className="bg-green-50 rounded-lg p-3 text-center">
+          <div className="flex items-center justify-center gap-1 mb-1">
+            {recentForm.length > 0 ? recentForm.map((r, i) => (
+              <span
+                key={i}
+                className={`w-6 h-6 rounded text-xs font-bold flex items-center justify-center ${
+                  r === 'W' ? 'bg-green-500 text-white' :
+                  r === 'L' ? 'bg-red-500 text-white' :
+                  'bg-yellow-500 text-white'
+                }`}
               >
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-white flex items-center justify-center shadow-sm">
-                    {getStatusIcon(training.status)}
-                  </div>
-                  <div>
-                    <p className="font-medium text-gray-900">
-                      {formatDate(training.date)}
-                    </p>
-                    <p className="text-sm text-gray-500">
-                      {training.startTime} - {training.endTime} | {t(`trainings.types.${training.type}`)}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-4">
-                  {/* Attendance Stats */}
-                  <div className="text-center">
-                    <p className="text-lg font-bold text-gray-900">
-                      {training.attendanceStats?.percentage || 0}%
-                    </p>
-                    <p className="text-xs text-gray-500">{t('trainings.attendance')}</p>
-                  </div>
-
-                  {/* Overall Rating */}
-                  {training.overallRating && (
-                    <div className="flex items-center gap-1 px-2 py-1 bg-yellow-100 rounded-lg">
-                      <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
-                      <span className="font-bold text-yellow-700">{training.overallRating}</span>
-                    </div>
-                  )}
-
-                  <Badge className={getStatusColor(training.status)}>
-                    {t(`trainings.statuses.${training.status}`)}
-                  </Badge>
-
-                  <ChevronRight className="w-5 h-5 text-gray-400" />
-                </div>
-              </div>
-            ))}
+                {r}
+              </span>
+            )) : <span className="text-gray-400">-</span>}
           </div>
+          <p className="text-xs text-green-500">{t('teams.recentForm')}</p>
+        </div>
+        <div className="bg-orange-50 rounded-lg p-3 text-center">
+          <p className="text-2xl font-bold text-orange-600">{injuredPlayers.length}</p>
+          <p className="text-xs text-orange-500">{t('teams.injuredPlayers')}</p>
+        </div>
+      </div>
+
+      {/* Tabs */}
+      <div className="flex border-b border-gray-200">
+        {tabs.map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            className={`flex items-center gap-2 px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+              activeTab === tab.id
+                ? 'border-primary-500 text-primary-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            <tab.icon className="w-4 h-4" />
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Tab Content */}
+      <div className="min-h-[300px]">
+        {/* Trainings Tab */}
+        {activeTab === 'trainings' && (
+          trainingsLoading ? (
+            <Loading />
+          ) : !trainingsData || trainingsData.length === 0 ? (
+            <div className="text-center py-8 text-gray-500">
+              {t('common.noData')}
+            </div>
+          ) : (
+            <div className="space-y-3 max-h-[350px] overflow-y-auto">
+              {trainingsData.map((training) => (
+                <div
+                  key={training._id}
+                  onClick={() => onViewTraining(training)}
+                  className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 cursor-pointer transition-colors"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-white flex items-center justify-center shadow-sm">
+                      {getStatusIcon(training.status)}
+                    </div>
+                    <div>
+                      <p className="font-medium text-gray-900">
+                        {formatDate(training.date)}
+                      </p>
+                      <p className="text-sm text-gray-500">
+                        {training.startTime} - {training.endTime} | {t(`trainings.types.${training.type}`)}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-4">
+                    <div className="text-center">
+                      <p className="text-lg font-bold text-gray-900">
+                        {training.attendanceStats?.percentage || 0}%
+                      </p>
+                      <p className="text-xs text-gray-500">{t('trainings.attendance')}</p>
+                    </div>
+
+                    {training.overallRating && (
+                      <div className="flex items-center gap-1 px-2 py-1 bg-yellow-100 rounded-lg">
+                        <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
+                        <span className="font-bold text-yellow-700">{training.overallRating}</span>
+                      </div>
+                    )}
+
+                    <Badge className={getStatusColor(training.status)}>
+                      {t(`trainings.statuses.${training.status}`)}
+                    </Badge>
+
+                    <ChevronRight className="w-5 h-5 text-gray-400" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          )
+        )}
+
+        {/* Matches Tab */}
+        {activeTab === 'matches' && (
+          matchesLoading ? (
+            <Loading />
+          ) : !matchesData || matchesData.length === 0 ? (
+            <div className="text-center py-8 text-gray-500">
+              {t('common.noData')}
+            </div>
+          ) : (
+            <div className="space-y-3 max-h-[350px] overflow-y-auto">
+              {matchesData.map((match) => (
+                <div
+                  key={match._id}
+                  className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-white flex items-center justify-center shadow-sm">
+                      <Gamepad2 className={`w-5 h-5 ${match.status === 'completed' ? 'text-green-500' : 'text-primary-500'}`} />
+                    </div>
+                    <div>
+                      <p className="font-medium text-gray-900">
+                        vs {match.opponent}
+                      </p>
+                      <p className="text-sm text-gray-500">
+                        {formatDate(match.date)} | {match.kickoffTime} | {match.isHome ? t('matches.home') : t('matches.away')}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-4">
+                    {match.status === 'completed' && (
+                      <div className="text-center">
+                        <p className="text-xl font-bold text-gray-900">
+                          {match.score?.home || 0} - {match.score?.away || 0}
+                        </p>
+                      </div>
+                    )}
+
+                    {getMatchResultBadge(match)}
+
+                    <Badge className={getStatusColor(match.status)}>
+                      {t(`matches.statuses.${match.status}`)}
+                    </Badge>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )
+        )}
+
+        {/* Players Tab */}
+        {activeTab === 'players' && (
+          playersLoading ? (
+            <Loading />
+          ) : !playersData || playersData.length === 0 ? (
+            <div className="text-center py-8 text-gray-500">
+              {t('common.noData')}
+            </div>
+          ) : (
+            <div className="space-y-3 max-h-[350px] overflow-y-auto">
+              {playersData.map((player) => (
+                <div
+                  key={player._id}
+                  className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                >
+                  <div className="flex items-center gap-3">
+                    <Avatar
+                      src={player.photo}
+                      firstName={player.firstName}
+                      lastName={player.lastName}
+                      size="small"
+                    />
+                    <div>
+                      <p className="font-medium text-gray-900">
+                        {player.firstName} {player.lastName}
+                        {player.injuryStatus === 'injured' && (
+                          <AlertTriangle className="w-4 h-4 text-orange-500 inline ml-2" />
+                        )}
+                      </p>
+                      <p className="text-sm text-gray-500">
+                        #{player.jerseyNumber} | {t(`players.positions.${player.position}`)}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-4">
+                    <div className="text-center">
+                      <p className="text-sm font-semibold text-gray-900">
+                        {player.statistics?.goals || 0} {t('players.goals')}
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        {player.statistics?.assists || 0} {t('players.assists')}
+                      </p>
+                    </div>
+
+                    {player.overallRating && (
+                      <div className="flex items-center gap-1 px-2 py-1 bg-primary-100 rounded-lg">
+                        <span className="font-bold text-primary-700">{player.overallRating}</span>
+                      </div>
+                    )}
+
+                    {player.injuryStatus === 'injured' ? (
+                      <Badge className="bg-orange-100 text-orange-700">{t('players.injured')}</Badge>
+                    ) : (
+                      <Badge className="bg-green-100 text-green-700">{t('players.available')}</Badge>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )
         )}
       </div>
 
@@ -530,10 +738,20 @@ const Teams = () => {
                   </div>
                 </div>
 
-                {/* View Trainings Hint */}
-                <div className="mt-3 pt-3 border-t border-gray-100 flex items-center justify-center text-primary-600 text-sm">
-                  <Eye className="w-4 h-4 mr-2" />
-                  {t('teams.viewTrainings')}
+                {/* View Details Hint */}
+                <div className="mt-3 pt-3 border-t border-gray-100 flex items-center justify-center gap-4 text-sm">
+                  <span className="flex items-center gap-1 text-primary-600">
+                    <Calendar className="w-4 h-4" />
+                    {t('teams.tabs.trainings')}
+                  </span>
+                  <span className="flex items-center gap-1 text-green-600">
+                    <Gamepad2 className="w-4 h-4" />
+                    {t('teams.tabs.matches')}
+                  </span>
+                  <span className="flex items-center gap-1 text-blue-600">
+                    <Users className="w-4 h-4" />
+                    {t('teams.tabs.players')}
+                  </span>
                 </div>
               </div>
             </Card>
